@@ -32,11 +32,13 @@ class AppTheme {
           foregroundColor: Colors.white,
           textStyle: AppTextStyles.button,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
         ),
       ),
+
       // You can also define other widget themes here, like text fields, etc.
     );
   }

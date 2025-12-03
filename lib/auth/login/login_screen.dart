@@ -1,4 +1,8 @@
+import 'package:diabetes_management_system/auth/registration/patient_registration_screen.dart';
+import 'package:diabetes_management_system/auth/registration/physician_registration_screen.dart';
 import 'package:diabetes_management_system/utils/responsive_layout.dart';
+import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
+import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
 import 'package:flutter/material.dart';
 import 'package:diabetes_management_system/theme/app_colors.dart';
 import 'package:diabetes_management_system/theme/app_text_styles.dart';
@@ -78,12 +82,9 @@ class __LoginFormState extends State<_LoginForm> {
         children: [
           Text('Login', style: AppTextStyles.headline1),
           SizedBox(height: 24),
-          TextFormField(
+          CustomTextFormField(
             controller: _emailController,
-            decoration: InputDecoration(
-              labelText: 'Email',
-              border: OutlineInputBorder(),
-            ),
+            labelText: 'Email',
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter your email';
@@ -92,13 +93,10 @@ class __LoginFormState extends State<_LoginForm> {
             },
           ),
           SizedBox(height: 16),
-          TextFormField(
+          CustomTextFormField(
             controller: _passwordController,
+            labelText: 'Password',
             obscureText: true,
-            decoration: InputDecoration(
-              labelText: 'Password',
-              border: OutlineInputBorder(),
-            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter your password';
@@ -107,13 +105,32 @@ class __LoginFormState extends State<_LoginForm> {
             },
           ),
           SizedBox(height: 24),
-          ElevatedButton(
+          CustomElevatedButton(
             onPressed: () {
               if (_formKey.currentState!.validate()) {
                 // Handle login logic
               }
             },
-            child: Text('Login'),
+            text: 'Login',
+          ),
+          SizedBox(height: 16),
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => PatientRegistrationScreen()),
+              );
+            },
+            child: Text('Register as a new patient'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => PhysicianRegistrationScreen()),
+              );
+            },
+            child: Text('Register as a new physician'),
           ),
         ],
       ),
