@@ -1,3 +1,4 @@
+import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:diabetes_management_system/theme/app_text_styles.dart';
 
@@ -59,7 +60,15 @@ class __PatientRegistrationFormState extends State<_PatientRegistrationForm> {
                 // Handle patient registration logic
               }
             },
-            child: Text('Register'),
+            child: TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => PatientDashboardScreen()),
+                );
+              },
+              child: Text('Register'),
+            ),
           ),
         ],
       ),

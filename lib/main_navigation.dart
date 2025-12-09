@@ -1,6 +1,5 @@
 import 'package:diabetes_management_system/auth/login/login_screen.dart';
-import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_screen.dart';
-import 'package:diabetes_management_system/physician/dashboard/physician_triage_dashboard_screen.dart';
+import 'package:diabetes_management_system/patient/patient_main_screen.dart';
 import 'package:flutter/material.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -9,40 +8,15 @@ class MainNavigation extends StatefulWidget {
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  bool _isLoggedIn = false;
-  int _currentIndex = 0;
-
-  final List<Widget> _views = [
-    PatientDashboardScreen(),
-    PhysicianTriageDashboardScreen(),
-  ];
-
-  void _onTabTapped(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-  }
+  // In a real app, this would be driven by an auth service.
+  // For now, we'll set it to true to see the patient view directly.
+  bool _isLoggedIn = true; 
 
   @override
   Widget build(BuildContext context) {
+    // If logged in, show the main patient screen, otherwise show the login screen.
     return _isLoggedIn
-        ? Scaffold(
-            body: _views[_currentIndex],
-            bottomNavigationBar: BottomNavigationBar(
-              onTap: _onTabTapped,
-              currentIndex: _currentIndex,
-              items: [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.person),
-                  label: 'Patient',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.medical_services),
-                  label: 'Physician',
-                ),
-              ],
-            ),
-          )
+        ? PatientMainScreen() 
         : LoginScreen();
   }
 }
