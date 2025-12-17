@@ -2,15 +2,33 @@
 //
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb; // Import kIsWeb for web check
+import 'package:http/http.dart' as http;
 
 class AuthService {
   // UPDATED: Added '/api/diabetes-management' to the path
   // Android Emulator: 10.0.2.2
   // iOS Simulator: localhost
-  final String _baseUrl = "http://10.0.2.2:8080/api/diabetes-management/api/auth";
+  String _getBaseUrl() {
+    if (kIsWeb) {
+      // Running on the web
+      return "http://127.0.0.1:8080/api/diabetes-management/api/auth";
+    } else if (Platform.isAndroid) {
+      // Running on Android
+      return "http://10.0.2.2:8080/api/diabetes-management/api/auth";
+    } else if (Platform.isIOS) {
+      // Running on iOS
+      return "http://127.0.0.1:8080/api/diabetes-management/api/auth";
+    }
+    // Default or other platforms
+    return "http://127.0.0.1:8080/api/diabetes-management/api/auth";
+  }
+
 
   Future<String> login(String email, String password) async {
-    final url = Uri.parse('$_baseUrl/login');
+    final baseUrl = _getBaseUrl();
+    final url = Uri.parse('$baseUrl/login');
 
     try {
       final response = await http.post(
