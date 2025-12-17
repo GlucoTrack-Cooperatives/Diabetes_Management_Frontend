@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 
 class CustomElevatedButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  final String text;
+  final VoidCallback? onPressed;
+  final Widget child;
 
   const CustomElevatedButton({
     Key? key,
     required this.onPressed,
-    required this.text,
+    required this.child,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
       onPressed: onPressed,
-      child: Text(text),
+      child: child,
     );
   }
 }

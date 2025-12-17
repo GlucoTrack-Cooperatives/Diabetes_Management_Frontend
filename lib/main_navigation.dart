@@ -13,7 +13,7 @@ class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
 
   final List<Widget> _views = [
-    PatientDashboardScreen(),
+    LoginScreen(),
     PhysicianTriageDashboardScreen(),
   ];
 
