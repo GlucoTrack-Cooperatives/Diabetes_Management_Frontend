@@ -51,7 +51,7 @@ class _SummaryTile extends StatelessWidget {
   final String subtitle;
   final Color color;
 
-  const _SummaryTile({Key? key, required this.title, required this.value, required this.subtitle, required this.color}) : super(key: key);
+  const _SummaryTile({required this.title, required this.value, required this.subtitle, required this.color});
 
   @override
   Widget build(BuildContext context) {

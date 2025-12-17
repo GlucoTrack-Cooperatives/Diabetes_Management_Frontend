@@ -7,6 +7,8 @@ import 'package:diabetes_management_system/widgets/side_navigation_drawer.dart';
 import 'package:flutter/material.dart';
 
 class PhysicianMainScreen extends StatefulWidget {
+  const PhysicianMainScreen({super.key});
+
   @override
   _PhysicianMainScreenState createState() => _PhysicianMainScreenState();
 }

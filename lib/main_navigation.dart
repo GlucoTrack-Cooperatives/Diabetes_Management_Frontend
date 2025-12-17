@@ -2,7 +2,7 @@ import 'package:diabetes_management_system/auth/login/login_screen.dart'; // Mak
 import 'package:flutter/material.dart';
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({Key? key}) : super(key: key);
+  const MainNavigation({super.key});
 
   @override
   _MainNavigationState createState() => _MainNavigationState();

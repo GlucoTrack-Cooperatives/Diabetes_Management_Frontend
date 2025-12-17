@@ -8,13 +8,13 @@ class SideNavigationDrawer extends StatelessWidget {
   final List<NavigationDrawerDestination> destinations;
 
   const SideNavigationDrawer({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.title,
     required this.destinations,
     this.indicatorColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

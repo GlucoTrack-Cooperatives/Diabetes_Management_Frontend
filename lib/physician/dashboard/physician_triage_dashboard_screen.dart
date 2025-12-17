@@ -20,7 +20,7 @@ class PhysicianTriageDashboardScreen extends StatelessWidget {
 class _PatientList extends StatelessWidget {
   final bool isDesktop;
 
-  const _PatientList({Key? key, required this.isDesktop}) : super(key: key);
+  const _PatientList({required this.isDesktop});
 
   @override
   Widget build(BuildContext context) {

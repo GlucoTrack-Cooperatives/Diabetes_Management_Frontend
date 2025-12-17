@@ -6,11 +6,11 @@ class PhysicianBottomNav extends StatelessWidget {
   final Color? backgroundColor;
 
   const PhysicianBottomNav({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onItemTapped,
     this.backgroundColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
