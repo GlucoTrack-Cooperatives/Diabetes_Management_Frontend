@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class PhysicianTriageDashboardScreen extends StatelessWidget {
+  const PhysicianTriageDashboardScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

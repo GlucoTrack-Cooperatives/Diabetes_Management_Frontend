@@ -6,12 +6,11 @@ class CustomElevatedButton extends StatelessWidget {
   final Widget? child;
 
   const CustomElevatedButton({
-    Key? key,
+    super.key,
     required this.onPressed,
     this.text,
     this.child,
-  }) : assert(text != null || child != null, 'Either text or child must be provided'),
-       super(key: key);
+  }) : assert(text != null || child != null, 'Either text or child must be provided');
 
   @override
   Widget build(BuildContext context) {

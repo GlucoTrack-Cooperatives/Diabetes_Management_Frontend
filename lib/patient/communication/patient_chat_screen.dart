@@ -4,6 +4,8 @@ import 'package:diabetes_management_system/utils/responsive_layout.dart';
 import 'package:flutter/material.dart';
 
 class PatientChatScreen extends StatelessWidget {
+  const PatientChatScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     // The Scaffold is provided by PatientMainScreen

@@ -5,6 +5,8 @@ import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
 import 'package:flutter/material.dart';
 
 class LifestyleTrackerScreen extends StatelessWidget {
+  const LifestyleTrackerScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return ResponsiveLayout(

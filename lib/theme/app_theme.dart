@@ -9,13 +9,12 @@ class AppTheme {
       colorScheme: ColorScheme.fromSwatch().copyWith(
         primary: AppColors.primary,
         secondary: AppColors.secondary,
-        background: AppColors.background,
         surface: AppColors.surface,
         error: AppColors.error,
       ),
       scaffoldBackgroundColor: AppColors.background,
       appBarTheme: const AppBarTheme(
-        color: AppColors.primary,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         iconTheme: IconThemeData(color: Colors.white),
         titleTextStyle: AppTextStyles.headline2,

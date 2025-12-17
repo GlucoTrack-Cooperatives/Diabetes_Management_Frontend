@@ -8,13 +8,13 @@ class CustomTextFormField extends StatelessWidget {
   final TextInputType? keyboardType; // Add this line
 
   const CustomTextFormField({
-    Key? key,
+    super.key,
     required this.controller,
     required this.labelText,
     this.validator,
     this.obscureText = false,
     this.keyboardType, // Add this line
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

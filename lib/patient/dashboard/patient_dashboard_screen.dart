@@ -6,6 +6,8 @@ import 'package:csv/csv.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class PatientDashboardScreen extends StatelessWidget {
+  const PatientDashboardScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     // Scaffold removed from here
@@ -210,7 +212,7 @@ class __GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
           }).toList(),
         ),
         SizedBox(height: 16),
-        Container(
+        SizedBox(
           height: 200,
           child: _allData.isEmpty
               ? Center(child: CircularProgressIndicator())

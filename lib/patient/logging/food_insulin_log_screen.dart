@@ -5,6 +5,8 @@ import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
 import 'package:flutter/material.dart';
 
 class FoodInsulinLogScreen extends StatelessWidget {
+  const FoodInsulinLogScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     // The Scaffold is provided by PatientMainScreen, so we just build the content.
