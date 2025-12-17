@@ -1,6 +1,7 @@
 import 'package:diabetes_management_system/auth/login/auth_provider.dart';
 import 'package:diabetes_management_system/auth/registration/patient_registration_screen.dart';
 import 'package:diabetes_management_system/auth/registration/physician_registration_screen.dart';
+import 'package:diabetes_management_system/patient/patient_main_screen.dart';
 import 'package:diabetes_management_system/utils/responsive_layout.dart';
 import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
 import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
@@ -78,7 +79,16 @@ class _LoginForm extends ConsumerWidget {
     // Listen for changes to show alerts or navigate
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.status == AuthStatus.success) {
-        // TODO: Navigate to the main dashboard
+        // 2. NAVIGATE TO DASHBOARD
+        // We use pushReplacement so the user can't click "back" to return to login
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => PatientMainScreen(),
+            // OR if you want to check roles:
+            // builder: (context) => next.user?.role == 'physician' ? PhysicianMainScreen() : PatientMainScreen(),
+          ),
+        );
+
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text('Login Successful!')));
