@@ -1,7 +1,7 @@
 import 'package:diabetes_management_system/auth/login/auth_provider.dart';
 import 'package:diabetes_management_system/auth/registration/patient_registration_screen.dart';
 import 'package:diabetes_management_system/auth/registration/physician_registration_screen.dart';
-import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_screen.dart';
+import 'package:diabetes_management_system/patient/patient_main_screen.dart';
 import 'package:diabetes_management_system/utils/responsive_layout.dart';
 import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
 import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
@@ -12,8 +12,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 
 class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -81,9 +79,19 @@ class _LoginForm extends ConsumerWidget {
     // Listen for changes to show alerts or navigate
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.status == AuthStatus.success) {
+        // 2. NAVIGATE TO DASHBOARD
+        // We use pushReplacement so the user can't click "back" to return to login
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => PatientDashboardScreen()),
+          MaterialPageRoute(
+            builder: (context) => PatientMainScreen(),
+            // OR if you want to check roles:
+            // builder: (context) => next.user?.role == 'physician' ? PhysicianMainScreen() : PatientMainScreen(),
+          ),
         );
+
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text('Login Successful!')));
       } else if (next.status == AuthStatus.error) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
