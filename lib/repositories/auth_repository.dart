@@ -12,20 +12,20 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) => AuthRepository(
 class AuthResult {
   final String token;
   final String role;
-
-  AuthResult({required this.token, required this.role});
+  final String userId;
+  AuthResult({required this.token, required this.role, required this.userId});
 }
 
 class AuthRepository {
   // Helper to get base URL based on platform
   String _getBaseUrl() {
-    if (kIsWeb) return "http://127.0.0.1:8080/api/diabetes-management/api/auth";
-    if (Platform.isAndroid) return "http://10.0.2.2:8080/api/diabetes-management/api/auth";
-    return "http://127.0.0.1:8080/api/diabetes-management/api/auth";
+    if (kIsWeb) return "http://127.0.0.1:8080/api/diabetes-management/api/";
+    if (Platform.isAndroid) return "http://10.0.2.2:8080/api/diabetes-management/api/";
+    return "http://127.0.0.1:8080/api/diabetes-management/api/";
   }
 
   Future<void> registerPatient(PatientRegistrationRequest request) async {
-    final url = Uri.parse('${_getBaseUrl()}/register/patient'); // Assumes this is your Spring endpoint
+    final url = Uri.parse('${_getBaseUrl()}/patients/sign-up');
 
     try {
       final response = await http.post(
@@ -49,7 +49,7 @@ class AuthRepository {
 
   Future<AuthResult> login(LoginRequest request) async {
     final baseUrl = _getBaseUrl();
-    final url = Uri.parse('$baseUrl/login');
+    final url = Uri.parse('$baseUrl/auth/login');
 
     try {
       final response = await http.post(
@@ -64,9 +64,10 @@ class AuthRepository {
         final body = jsonDecode(response.body);
         final token = body['jwt'];
         final role = body['role'];
+        final userId = body['userId'];
 
-        if (token != null && role != null) {
-          return AuthResult(token: token, role: role);
+        if (token != null && role != null && userId != null) {
+          return AuthResult(token: token, role: role, userId: userId);
         } else {
           throw Exception('Token (jwt) not found in response body.');
         }
@@ -79,7 +80,7 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
-    final url = Uri.parse('${_getBaseUrl()}/logout');
+    final url = Uri.parse('${_getBaseUrl()}/auth/logout');
     await http.post(url);
 
     return;
