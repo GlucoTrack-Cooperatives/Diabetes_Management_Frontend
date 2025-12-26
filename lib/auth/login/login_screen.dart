@@ -1,15 +1,201 @@
-import 'package:diabetes_management_system/auth/login/auth_provider.dart';
+// import 'package:diabetes_management_system/auth/login/auth_provider.dart';
+// import 'package:diabetes_management_system/auth/registration/patient_registration_screen.dart';
+// import 'package:diabetes_management_system/auth/registration/physician_registration_screen.dart';
+// import 'package:diabetes_management_system/patient/patient_main_screen.dart';
+// import 'package:diabetes_management_system/utils/responsive_layout.dart';
+// import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
+// import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
+// import 'package:flutter/material.dart';
+// import 'package:diabetes_management_system/theme/app_colors.dart';
+// import 'package:diabetes_management_system/theme/app_text_styles.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+//
+//
+// class LoginScreen extends StatelessWidget {
+//   const LoginScreen({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       body: ResponsiveLayout(
+//         mobileBody: _LoginMobileBody(),
+//         desktopBody: _LoginDesktopBody(),
+//       ),
+//     );
+//   }
+// }
+//
+// class _LoginMobileBody extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return Center(
+//       child: SingleChildScrollView(
+//         child: Padding(
+//           padding: const EdgeInsets.all(24.0),
+//           child: _LoginForm(),
+//         ),
+//       ),
+//     );
+//   }
+// }
+//
+// class _LoginDesktopBody extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return Row(
+//       children: [
+//         Expanded(
+//           child: Container(
+//             color: AppColors.primary,
+//             child: Center(
+//               child: Text(
+//                 'Diabetes Management System',
+//                 style: AppTextStyles.headline1.copyWith(color: Colors.white),
+//               ),
+//             ),
+//           ),
+//         ),
+//         Expanded(
+//           child: Center(
+//             child: ConstrainedBox(
+//               constraints: BoxConstraints(maxWidth: 400),
+//               child: _LoginForm(),
+//             ),
+//           ),
+//         ),
+//       ],
+//     );
+//   }
+// }
+//
+//
+// class _LoginForm extends ConsumerWidget {
+//   final _formKey = GlobalKey<FormState>();
+//   final _emailController = TextEditingController();
+//   final _passwordController = TextEditingController();
+//
+//   @override
+//   Widget build(BuildContext context, WidgetRef ref) { // Add WidgetRef
+//     // Watch the state of the authProvider
+//     final authState = ref.watch(authProvider);
+//     // Listen for changes to show alerts or navigate
+//     ref.listen<AuthState>(authProvider, (previous, next) {
+//       if (next.status == AuthStatus.success) {
+//         // 2. NAVIGATE TO DASHBOARD
+//         // We use pushReplacement so the user can't click "back" to return to login
+//         Navigator.of(context).pushReplacement(
+//           MaterialPageRoute(
+//             builder: (context) => PatientMainScreen(),
+//             // OR if you want to check roles:
+//             // builder: (context) => next.user?.role == 'physician' ? PhysicianMainScreen() : PatientMainScreen(),
+//           ),
+//         );
+//
+//         ScaffoldMessenger.of(context)
+//           ..hideCurrentSnackBar()
+//           ..showSnackBar(SnackBar(content: Text('Login Successful!')));
+//       } else if (next.status == AuthStatus.error) {
+//         ScaffoldMessenger.of(context)
+//           ..hideCurrentSnackBar()
+//           ..showSnackBar(SnackBar(content: Text('Login Failed: ${next.errorMessage}')));
+//       }
+//     });
+//
+//     return Form(
+//       key: _formKey,
+//       child: Column(
+//         mainAxisAlignment: MainAxisAlignment.center,
+//         crossAxisAlignment: CrossAxisAlignment.stretch,
+//         children: [
+//           Text('Login', style: AppTextStyles.headline1),
+//           SizedBox(height: 24),
+//           CustomTextFormField(
+//             controller: _emailController,
+//             labelText: 'Email',
+//             validator: (value) {
+//               if (value == null || value.isEmpty) {
+//                 return 'Please enter your email';
+//               }
+//               return null;
+//             },
+//           ),
+//           SizedBox(height: 16),
+//           CustomTextFormField(
+//             controller: _passwordController,
+//             labelText: 'Password',
+//             obscureText: true,
+//             validator: (value) {
+//               if (value == null || value.isEmpty) {
+//                 return 'Please enter your password';
+//               }
+//               return null;
+//             },
+//           ),
+//           SizedBox(height: 24),
+//           CustomElevatedButton(
+//             onPressed: authState.status == AuthStatus.loading
+//                 ? null // Disable button while loading
+//                 : () {
+//               if (_formKey.currentState!.validate()) {
+//                 // Call the login method
+//                 // from the provider
+//                 ref.read(authProvider.notifier).login(
+//
+//                   _emailController.text,
+//                   _passwordController.text,
+//                 );
+//               }
+//             },
+//             // Show a loading indicator or text
+//             child: authState.status == AuthStatus.loading
+//                 ? const SizedBox(
+//               height: 24,
+//               width: 24,
+//               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.0),
+//             )
+//                 : Text('Login'),
+//           ),
+//           SizedBox(height: 16),
+//           TextButton(
+//             onPressed: () {
+//               Navigator.push(
+//                 context,
+//                 MaterialPageRoute(builder: (context) => PatientRegistrationScreen()),
+//               );
+//             },
+//             child: Text('Register as a new patient'),
+//           ),
+//           TextButton(
+//             onPressed: () {
+//               Navigator.push(
+//                 context,
+//                 MaterialPageRoute(builder: (context) => PhysicianRegistrationScreen()),
+//               );
+//             },
+//             child: Text('Register as a new physician'),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Imports for your specific project structure
 import 'package:diabetes_management_system/auth/registration/patient_registration_screen.dart';
 import 'package:diabetes_management_system/auth/registration/physician_registration_screen.dart';
 import 'package:diabetes_management_system/patient/patient_main_screen.dart';
 import 'package:diabetes_management_system/utils/responsive_layout.dart';
 import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
 import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
-import 'package:flutter/material.dart';
 import 'package:diabetes_management_system/theme/app_colors.dart';
 import 'package:diabetes_management_system/theme/app_text_styles.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+// Import the new controller
+import 'login_controller.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -58,7 +244,7 @@ class _LoginDesktopBody extends StatelessWidget {
         Expanded(
           child: Center(
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 400),
+              constraints: const BoxConstraints(maxWidth: 400),
               child: _LoginForm(),
             ),
           ),
@@ -68,37 +254,63 @@ class _LoginDesktopBody extends StatelessWidget {
   }
 }
 
+class _LoginForm extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_LoginForm> createState() => _LoginFormState();
+}
 
-class _LoginForm extends ConsumerWidget {
+class _LoginFormState extends ConsumerState<_LoginForm> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) { // Add WidgetRef
-    // Watch the state of the authProvider
-    final authState = ref.watch(authProvider);
-    // Listen for changes to show alerts or navigate
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      if (next.status == AuthStatus.success) {
-        // 2. NAVIGATE TO DASHBOARD
-        // We use pushReplacement so the user can't click "back" to return to login
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => PatientMainScreen(),
-            // OR if you want to check roles:
-            // builder: (context) => next.user?.role == 'physician' ? PhysicianMainScreen() : PatientMainScreen(),
-          ),
-        );
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text('Login Successful!')));
-      } else if (next.status == AuthStatus.error) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text('Login Failed: ${next.errorMessage}')));
-      }
+  void _onLoginPressed() {
+    if (_formKey.currentState!.validate()) {
+      // Call the new controller
+      ref.read(loginControllerProvider.notifier).login(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 1. Watch the state to update UI (Loading spinners, etc)
+    final state = ref.watch(loginControllerProvider);
+    final isLoading = state.isLoading;
+
+    // 2. Listen for Side Effects (Navigation, Snackbars)
+    ref.listen<AsyncValue<void>>(loginControllerProvider, (previous, next) {
+      next.when(
+        data: (_) {
+          // Success! (Only navigate if we are coming from a loading state to avoid double nav)
+          if (previous?.isLoading == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Login Successful!')),
+            );
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const PatientMainScreen()),
+            );
+          }
+        },
+        error: (error, stack) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Login Failed: ${error.toString().replaceAll("Exception:", "")}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        },
+        loading: () {}, // Do nothing, UI handles loading locally
+      );
     });
 
     return Form(
@@ -108,71 +320,57 @@ class _LoginForm extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text('Login', style: AppTextStyles.headline1),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           CustomTextFormField(
             controller: _emailController,
             labelText: 'Email',
             validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your email';
-              }
+              if (value == null || value.isEmpty) return 'Please enter your email';
               return null;
             },
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           CustomTextFormField(
             controller: _passwordController,
             labelText: 'Password',
             obscureText: true,
             validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your password';
-              }
+              if (value == null || value.isEmpty) return 'Please enter your password';
               return null;
             },
           ),
-          SizedBox(height: 24),
-          CustomElevatedButton(
-            onPressed: authState.status == AuthStatus.loading
-                ? null // Disable button while loading
-                : () {
-              if (_formKey.currentState!.validate()) {
-                // Call the login method
-                // from the provider
-                ref.read(authProvider.notifier).login(
+          const SizedBox(height: 24),
 
-                  _emailController.text,
-                  _passwordController.text,
-                );
-              }
-            },
-            // Show a loading indicator or text
-            child: authState.status == AuthStatus.loading
+          // Updated Button Logic
+          CustomElevatedButton(
+            onPressed: isLoading ? null : _onLoginPressed,
+            child: isLoading
                 ? const SizedBox(
               height: 24,
               width: 24,
               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.0),
             )
-                : Text('Login'),
+                : const Text('Login'),
           ),
-          SizedBox(height: 16),
+
+          const SizedBox(height: 16),
           TextButton(
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => PatientRegistrationScreen()),
+                MaterialPageRoute(builder: (context) => const PatientRegistrationScreen()),
               );
             },
-            child: Text('Register as a new patient'),
+            child: const Text('Register as a new patient'),
           ),
           TextButton(
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => PhysicianRegistrationScreen()),
+                MaterialPageRoute(builder: (context) => const PhysicianRegistrationScreen()),
               );
             },
-            child: Text('Register as a new physician'),
+            child: const Text('Register as a new physician'),
           ),
         ],
       ),
