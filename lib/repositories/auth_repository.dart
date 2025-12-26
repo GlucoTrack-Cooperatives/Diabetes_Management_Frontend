@@ -9,6 +9,13 @@ import '../models/patient_registration_request.dart';
 // Provider to access the repository
 final authRepositoryProvider = Provider<AuthRepository>((ref) => AuthRepository());
 
+class AuthResult {
+  final String token;
+  final String role;
+
+  AuthResult({required this.token, required this.role});
+}
+
 class AuthRepository {
   // Helper to get base URL based on platform
   String _getBaseUrl() {
@@ -40,7 +47,7 @@ class AuthRepository {
   }
 
 
-  Future<String> login(LoginRequest request) async {
+  Future<AuthResult> login(LoginRequest request) async {
     final baseUrl = _getBaseUrl();
     final url = Uri.parse('$baseUrl/login');
 
@@ -55,12 +62,11 @@ class AuthRepository {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-
-        // Matches AuthToken.builder().jwt(token)
         final token = body['jwt'];
+        final role = body['role'];
 
-        if (token != null) {
-          return token;
+        if (token != null && role != null) {
+          return AuthResult(token: token, role: role);
         } else {
           throw Exception('Token (jwt) not found in response body.');
         }

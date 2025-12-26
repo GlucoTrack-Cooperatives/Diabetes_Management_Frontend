@@ -10,8 +10,8 @@ import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
 import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
 import 'package:diabetes_management_system/theme/app_colors.dart';
 import 'package:diabetes_management_system/theme/app_text_styles.dart';
-
-// Import the new controller
+import '../../physician/physician_main_screen.dart';
+import '../../services/secure_storage_service.dart';
 import 'login_controller.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -104,29 +104,34 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
     final state = ref.watch(loginControllerProvider);
     final isLoading = state.isLoading;
 
-    // 2. Listen for Side Effects (Navigation, Snackbars)
-    ref.listen<AsyncValue<void>>(loginControllerProvider, (previous, next) {
+    ref.listen<AsyncValue<void>>(loginControllerProvider, (previous, next) async {
       next.when(
-        data: (_) {
-          // Success! (Only navigate if we are coming from a loading state to avoid double nav)
+        data: (_) async {
           if (previous?.isLoading == true) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Login Successful!')),
-            );
+            // Login Successful. Now check the role to decide where to go.
+            final role = await ref.read(storageServiceProvider).getRole();
+
+            if (!context.mounted) return;
+
+            Widget targetScreen;
+            if (role == 'PATIENT') {
+              targetScreen = const PatientMainScreen();
+            } else if (role == 'PHYSICIAN') {
+              targetScreen = const PhysicianMainScreen();
+            } else {
+              // Fallback or Admin
+              targetScreen = const PatientMainScreen();
+            }
+
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const PatientMainScreen()),
+              MaterialPageRoute(builder: (context) => targetScreen),
             );
           }
         },
         error: (error, stack) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Login Failed: ${error.toString().replaceAll("Exception:", "")}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          // ... error handling ...
         },
-        loading: () {}, // Do nothing, UI handles loading locally
+        loading: () {},
       );
     });
 
