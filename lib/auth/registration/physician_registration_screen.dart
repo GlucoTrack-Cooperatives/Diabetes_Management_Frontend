@@ -1,7 +1,10 @@
+import 'package:diabetes_management_system/physician/physician_main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:diabetes_management_system/theme/app_text_styles.dart';
 
 class PhysicianRegistrationScreen extends StatelessWidget {
+  const PhysicianRegistrationScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -58,7 +61,15 @@ class __PhysicianRegistrationFormState extends State<_PhysicianRegistrationForm>
                 // Handle physician registration logic
               }
             },
-            child: Text('Register'),
+            child: TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => PhysicianMainScreen()),
+                );
+              },
+              child: Text('Register'),
+            ),
           ),
         ],
       ),

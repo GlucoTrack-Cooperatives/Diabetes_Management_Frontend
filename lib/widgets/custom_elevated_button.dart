@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 
 class CustomElevatedButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  final String text;
+  final VoidCallback? onPressed;
+  final String? text;
+  final Widget? child;
 
   const CustomElevatedButton({
-    Key? key,
+    super.key,
     required this.onPressed,
-    required this.text,
-  }) : super(key: key);
+    this.text,
+    this.child,
+  }) : assert(text != null || child != null, 'Either text or child must be provided');
 
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
       onPressed: onPressed,
-      child: Text(text),
+      child: child ?? Text(text!),
     );
   }
 }
