@@ -3,13 +3,18 @@ import 'package:diabetes_management_system/theme/app_text_styles.dart';
 import 'package:diabetes_management_system/utils/responsive_layout.dart';
 import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
 import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
-import 'package:flutter/foundation.dart'; // For kIsWeb
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 // Services
 import 'package:diabetes_management_system/services/spoonacular_service.dart';
 import 'package:diabetes_management_system/services/open_food_facts_service.dart';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Import Riverpod
+import 'package:diabetes_management_system/models/food_log_request.dart';
+import 'package:diabetes_management_system/repositories/log_repository.dart';
+
 
 // --- MAIN SCREEN ---
 class FoodInsulinLogScreen extends StatefulWidget {
@@ -111,20 +116,26 @@ class __LogInputSectionState extends State<_LogInputSection> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    // 1. Remove SingleChildScrollView.
+    // We want the Column to fill the screen height exactly.
     return Column(
       children: [
         TabBar(
           controller: _tabController,
-          labelColor: Colors.blue,
+          labelColor: Colors.black,
           unselectedLabelColor: Colors.grey,
           tabs: [Tab(text: 'Meal Log'), Tab(text: 'Insulin Log')],
         ),
         SizedBox(height: 16),
-        SizedBox(
-          height: 800, // Adjusted height to fit all fields
+
+        // 2. Use Expanded instead of SizedBox
+        // This tells TabBarView: "Take up all the remaining screen space below the tabs"
+        Expanded(
           child: TabBarView(
             controller: _tabController,
             children: [
+              // 3. Make sure these widgets handle their own scrolling!
+              // (e.g., they should return a ListView or SingleChildScrollView)
               _MealLogView(onLogAdded: widget.onLogAdded),
               _InsulinLogView(onLogAdded: widget.onLogAdded),
             ],
@@ -137,15 +148,15 @@ class __LogInputSectionState extends State<_LogInputSection> with SingleTickerPr
 
 // --- MEAL LOG VIEW (HANDLES PHOTOS & BARCODES) ---
 
-class _MealLogView extends StatefulWidget {
+class _MealLogView extends ConsumerStatefulWidget {
   final Function(String) onLogAdded;
   const _MealLogView({required this.onLogAdded});
 
   @override
-  State<_MealLogView> createState() => _MealLogViewState();
+  ConsumerState<_MealLogView> createState() => _MealLogViewState();
 }
 
-class _MealLogViewState extends State<_MealLogView> {
+class _MealLogViewState extends ConsumerState<_MealLogView> {
   // Controllers
   final TextEditingController _descController = TextEditingController();
   final TextEditingController _carbsController = TextEditingController();
@@ -221,19 +232,56 @@ class _MealLogViewState extends State<_MealLogView> {
     }
   }
 
-  void _submitLog() {
+  Future<void> _submitLog() async {
     if (_descController.text.isNotEmpty && _carbsController.text.isNotEmpty) {
-      String entry = "${_carbsController.text}g Carbs - ${_descController.text}";
-      widget.onLogAdded(entry);
 
-      // Reset
-      _descController.clear();
-      _carbsController.clear();
-      _caloriesController.clear();
-      _barcodeInputController.clear();
-      setState(() => _imageFile = null);
+      final String description = _descController.text;
+      final int carbs = int.tryParse(_carbsController.text) ?? 0;
+      final int calories = int.tryParse(_caloriesController.text) ?? 0;
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Meal Logged!")));
+      final request = FoodLogRequest(
+        description: description,
+        carbs: carbs,
+        calories: calories,
+      );
+
+      // 2. TODO: Get actual Patient ID from Auth Provider
+      const String patientId = "b9255850-8b6a-4643-b26a-4f810e755533"; // Temporary hardcoded UUID
+
+      setState(() => _isLoading = true); // Show loading state if you want
+
+      try {
+        // 3. Call the Repository using 'ref'
+        await ref.read(logRepositoryProvider).createFoodLog(patientId, request);
+
+        // 4. Update UI on Success
+        String entry = "${carbs}g Carbs - $description";
+        widget.onLogAdded(entry);
+
+        // Reset inputs
+        _descController.clear();
+        _carbsController.clear();
+        _caloriesController.clear();
+        _barcodeInputController.clear();
+        setState(() => _imageFile = null);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Meal Logged Successfully!")));
+        }
+
+      } catch (e) {
+        // 5. Handle Errors
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Failed to save log: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ));
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please enter at least description and carbs.")));
     }
   }
 
@@ -262,7 +310,6 @@ class _MealLogViewState extends State<_MealLogView> {
               alignment: Alignment.topRight,
               children: [
                 Container(
-                  height: 180,
                   width: double.infinity,
                   margin: EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
@@ -289,7 +336,7 @@ class _MealLogViewState extends State<_MealLogView> {
                 child: OutlinedButton.icon(
                     onPressed: () => _pickImage(ImageSource.gallery),
                     icon: Icon(Icons.photo_library),
-                    label: Text('Gallery')
+                    label: Text('Gallery' , style: TextStyle(color: Colors.black))
                 )
             ),
             SizedBox(width: 16),
@@ -297,7 +344,7 @@ class _MealLogViewState extends State<_MealLogView> {
                 child: OutlinedButton.icon(
                     onPressed: () => _pickImage(ImageSource.camera),
                     icon: Icon(Icons.camera_alt_outlined),
-                    label: Text('Camera')
+                    label: Text('Camera', style: TextStyle(color: Colors.black))
                 )
             ),
           ]),
@@ -330,17 +377,10 @@ class _MealLogViewState extends State<_MealLogView> {
             ),
 
           // 5. ACTION BUTTON (Calls API)
-          ElevatedButton.icon(
+          CustomElevatedButton(
             onPressed: _isLoading ? null : _analyzeData,
-            icon: _isLoading
-                ? SizedBox(height:16, width:16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : Icon(_isBarcodeMode ? Icons.add_card : Icons.auto_awesome),
-            label: Text(_isBarcodeMode ? "Search Barcode" : "Identify Food"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _isBarcodeMode ? Colors.indigo : Colors.blueAccent,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 12),
-            ),
+            height: 50.0,
+            child: Text(_isBarcodeMode ? "Search Barcode" : "Identify Food"),
           ),
 
           SizedBox(height: 24),
@@ -353,7 +393,11 @@ class _MealLogViewState extends State<_MealLogView> {
           CustomTextFormField(labelText: 'Calories', controller: _caloriesController, keyboardType: TextInputType.number),
 
           SizedBox(height: 24),
-          CustomElevatedButton(onPressed: _submitLog, text: 'Log Meal'),
+          CustomElevatedButton(
+              onPressed: _submitLog,
+              text: 'Log Meal',
+              height: 50.0
+          ),
         ],
       ),
     );
