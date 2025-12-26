@@ -7,7 +7,8 @@ import 'package:flutter/foundation.dart' show kIsWeb; // Import kIsWeb for web c
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  // UPDATED: Added '/api/diabetes-management' to the path
+  // WORK ONLY for localhost
+  // Added '/api/diabetes-management' to the path
   // Android Emulator: 10.0.2.2
   // iOS Simulator: localhost
   String _getBaseUrl() {
