@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../services/api_client.dart';
+import '../services/api_client.dart';
 
 final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
   return DashboardRepository(ref.watch(apiClientProvider)); // Inject the smart client
