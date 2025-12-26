@@ -26,25 +26,18 @@ class LoginController extends StateNotifier<AsyncValue<void>> {
     state = await AsyncValue.guard(() async {
       final request = LoginRequest(email: email, password: password);
 
-      final token = await _repository.login(request);
+      final result = await _repository.login(request);
 
-      // TODO: Securely save the token here (e.g., FlutterSecureStorage)
-      await _storageService.saveToken(token);
+      await _storageService.saveCredentials(result.token, result.role);
 
-      print('Login Success. Token: $token');
-      // We don't need to return anything, "Success" is implied if no error is thrown
     });
   }
 
   // LOGOUT logic
   Future<void> logout() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      // 1. Optional: Call server API
-      await _repository.logout();
-
-      // 2. Critical: Delete the token locally
-      await _storageService.clearToken();
-    });
+    await _storageService.clearAll(); // Clears both token and role
+    state = const AsyncValue.data(null);
   }
+
 }
