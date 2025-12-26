@@ -28,7 +28,7 @@ class LoginController extends StateNotifier<AsyncValue<void>> {
 
       final result = await _repository.login(request);
 
-      await _storageService.saveCredentials(result.token, result.role);
+      await _storageService.saveCredentials(result.token, result.role, result.userId);
 
     });
   }
