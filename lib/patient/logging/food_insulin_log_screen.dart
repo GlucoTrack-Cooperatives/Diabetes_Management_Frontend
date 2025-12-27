@@ -6,14 +6,15 @@ import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
+import 'package:diabetes_management_system/models/log_entry_dto.dart';
 
 // Services
 import 'package:diabetes_management_system/services/spoonacular_service.dart';
 import 'package:diabetes_management_system/services/open_food_facts_service.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // Import Riverpod
-import 'package:diabetes_management_system/models/food_log_request.dart';
-import 'package:diabetes_management_system/repositories/log_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:diabetes_management_system/patient/logging/food_log_controller.dart';
 
 
 // --- MAIN SCREEN ---
@@ -23,27 +24,12 @@ class FoodInsulinLogScreen extends StatefulWidget {
 }
 
 class _FoodInsulinLogScreenState extends State<FoodInsulinLogScreen> {
-  // This list holds the logs for the current session
-  final List<Map<String, String>> _recentLogs = [
-    {'title': '6 Units Rapid', 'time': '12:45 PM'},
-    {'title': '50g Carbs - Oatmeal', 'time': '12:30 PM'},
-  ];
-
-  // Method to add a new log instantly
-  void _addNewLog(String title) {
-    setState(() {
-      _recentLogs.insert(0, {
-        'title': title,
-        'time': 'Just now',
-      });
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return ResponsiveLayout(
-      mobileBody: _MobileLogBody(logs: _recentLogs, onLogAdded: _addNewLog),
-      desktopBody: _DesktopLogBody(logs: _recentLogs, onLogAdded: _addNewLog),
+      mobileBody: _MobileLogBody(),
+      desktopBody: _DesktopLogBody(),
     );
   }
 }
@@ -51,10 +37,8 @@ class _FoodInsulinLogScreenState extends State<FoodInsulinLogScreen> {
 // --- RESPONSIVE LAYOUTS ---
 
 class _MobileLogBody extends StatelessWidget {
-  final List<Map<String, String>> logs;
-  final Function(String) onLogAdded;
 
-  const _MobileLogBody({required this.logs, required this.onLogAdded});
+  const _MobileLogBody();
 
   @override
   Widget build(BuildContext context) {
@@ -63,9 +47,9 @@ class _MobileLogBody extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            _LogInputSection(onLogAdded: onLogAdded),
+            _LogInputSection(),
             SizedBox(height: 24),
-            _RecentLogsList(logs: logs),
+            _RecentLogsList(),
           ],
         ),
       ),
@@ -74,10 +58,8 @@ class _MobileLogBody extends StatelessWidget {
 }
 
 class _DesktopLogBody extends StatelessWidget {
-  final List<Map<String, String>> logs;
-  final Function(String) onLogAdded;
 
-  const _DesktopLogBody({required this.logs, required this.onLogAdded});
+  const _DesktopLogBody();
 
   @override
   Widget build(BuildContext context) {
@@ -86,9 +68,9 @@ class _DesktopLogBody extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(flex: 2, child: _LogInputSection(onLogAdded: onLogAdded)),
+          Expanded(flex: 2, child: _LogInputSection()),
           SizedBox(width: 24),
-          Expanded(flex: 1, child: _RecentLogsList(logs: logs)),
+          Expanded(flex: 1, child: _RecentLogsList()),
         ],
       ),
     );
@@ -98,8 +80,8 @@ class _DesktopLogBody extends StatelessWidget {
 // --- INPUT SECTION ---
 
 class _LogInputSection extends StatefulWidget {
-  final Function(String) onLogAdded;
-  const _LogInputSection({required this.onLogAdded});
+
+  const _LogInputSection();
 
   @override
   __LogInputSectionState createState() => __LogInputSectionState();
@@ -136,8 +118,8 @@ class __LogInputSectionState extends State<_LogInputSection> with SingleTickerPr
             children: [
               // 3. Make sure these widgets handle their own scrolling!
               // (e.g., they should return a ListView or SingleChildScrollView)
-              _MealLogView(onLogAdded: widget.onLogAdded),
-              _InsulinLogView(onLogAdded: widget.onLogAdded),
+              _MealLogView(),
+              _InsulinLogView(),
             ],
           ),
         ),
@@ -149,8 +131,7 @@ class __LogInputSectionState extends State<_LogInputSection> with SingleTickerPr
 // --- MEAL LOG VIEW (HANDLES PHOTOS & BARCODES) ---
 
 class _MealLogView extends ConsumerStatefulWidget {
-  final Function(String) onLogAdded;
-  const _MealLogView({required this.onLogAdded});
+  const _MealLogView();
 
   @override
   ConsumerState<_MealLogView> createState() => _MealLogViewState();
@@ -161,11 +142,11 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
   final TextEditingController _descController = TextEditingController();
   final TextEditingController _carbsController = TextEditingController();
   final TextEditingController _caloriesController = TextEditingController();
-  final TextEditingController _barcodeInputController = TextEditingController(); // NEW: For manual barcode entry
+  final TextEditingController _barcodeInputController = TextEditingController();
 
-  // State
+  // State (UI specific)
   bool _isBarcodeMode = false;
-  bool _isLoading = false;
+  // bool _isLoading = false; // <-- REMOVED: Managed by Controller now
   XFile? _imageFile;
 
   // Services
@@ -196,8 +177,6 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please enter a barcode or take a photo.")));
       return;
     }
-
-    setState(() => _isLoading = true);
     Map<String, dynamic>? result;
 
     if (_isBarcodeMode) {
@@ -218,8 +197,6 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
       result = await _spoonacularService.analyzeFoodImage(_imageFile!);
     }
 
-    setState(() => _isLoading = false);
-
     if (result != null) {
       _descController.text = result['description'] ?? '';
       _carbsController.text = result['carbs'] ?? '';
@@ -232,61 +209,47 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
     }
   }
 
-  Future<void> _submitLog() async {
-    if (_descController.text.isNotEmpty && _carbsController.text.isNotEmpty) {
+  void _submitLog() {
+    // We just pass the raw text to the controller. The controller handles validation & API.
+    ref.read(foodLogControllerProvider.notifier).submitLog(
+      description: _descController.text,
+      carbsStr: _carbsController.text,
+      caloriesStr: _caloriesController.text,
+    );
+  }
 
-      final String description = _descController.text;
-      final int carbs = int.tryParse(_carbsController.text) ?? 0;
-      final int calories = int.tryParse(_caloriesController.text) ?? 0;
+  @override
+  Widget build(BuildContext context) {
+    // 1. Listen to the Controller State
+    ref.listen<FoodLogState>(foodLogControllerProvider, (previous, next) {
+      if (next is FoodLogSuccess) {
+        // Success Logic
 
-      final request = FoodLogRequest(
-        description: description,
-        carbs: carbs,
-        calories: calories,
-      );
-
-      // 2. TODO: Get actual Patient ID from Auth Provider
-      const String patientId = "b9255850-8b6a-4643-b26a-4f810e755533"; // Temporary hardcoded UUID
-
-      setState(() => _isLoading = true); // Show loading state if you want
-
-      try {
-        // 3. Call the Repository using 'ref'
-        await ref.read(logRepositoryProvider).createFoodLog(patientId, request);
-
-        // 4. Update UI on Success
-        String entry = "${carbs}g Carbs - $description";
-        widget.onLogAdded(entry);
-
-        // Reset inputs
+        // Clear forms
         _descController.clear();
         _carbsController.clear();
         _caloriesController.clear();
         _barcodeInputController.clear();
         setState(() => _imageFile = null);
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Meal Logged Successfully!")));
-        }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Meal Logged Successfully!")));
 
-      } catch (e) {
-        // 5. Handle Errors
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("Failed to save log: ${e.toString()}"),
-            backgroundColor: Colors.red,
-          ));
-        }
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
+        // Reset controller state so we don't trigger success again accidentally
+        ref.read(foodLogControllerProvider.notifier).resetState();
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please enter at least description and carbs.")));
-    }
-  }
+      else if (next is FoodLogError) {
+        // Error Logic
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(next.message),
+          backgroundColor: Colors.red,
+        ));
+      }
+    });
 
-  @override
-  Widget build(BuildContext context) {
+    // 2. Watch the state to handle Loading UI
+    final state = ref.watch(foodLogControllerProvider);
+    final bool isLoading = state is FoodLogLoading;
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -378,7 +341,7 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
 
           // 5. ACTION BUTTON (Calls API)
           CustomElevatedButton(
-            onPressed: _isLoading ? null : _analyzeData,
+            onPressed:  _analyzeData,
             height: 50.0,
             child: Text(_isBarcodeMode ? "Search Barcode" : "Identify Food"),
           ),
@@ -431,8 +394,7 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
 
 // --- INSULIN LOG VIEW ---
 class _InsulinLogView extends StatefulWidget {
-  final Function(String) onLogAdded;
-  const _InsulinLogView({required this.onLogAdded});
+  const _InsulinLogView();
 
   @override
   State<_InsulinLogView> createState() => _InsulinLogViewState();
@@ -444,7 +406,6 @@ class _InsulinLogViewState extends State<_InsulinLogView> {
 
   void _submitDose() {
     if (_doseController.text.isNotEmpty) {
-      widget.onLogAdded("${_doseController.text} Units $_insulinType");
       _doseController.clear();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Dose Logged!")));
     }
@@ -474,47 +435,59 @@ class _InsulinLogViewState extends State<_InsulinLogView> {
   }
 }
 
-// --- RECENT LOGS LIST (Fix for Overflow) ---
-class _RecentLogsList extends StatelessWidget {
-  final List<Map<String, String>> logs;
-
-  const _RecentLogsList({required this.logs});
+// --- RECENT LOGS LIST
+class _RecentLogsList extends ConsumerWidget {
+  const _RecentLogsList();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final logsAsyncValue = ref.watch(recentLogsProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Recent Logs', style: AppTextStyles.headline2),
         SizedBox(height: 12),
-        Card(
-          child: ListView.separated(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            itemCount: logs.length,
-            itemBuilder: (context, index) {
-              return ListTile(
-                // 1. Allow the title to wrap if it's too long
-                title: Text(
-                  logs[index]['title']!,
-                  style: AppTextStyles.bodyText1,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                // 2. Move time to subtitle (below) instead of trailing (side)
-                // This prevents the "RenderFlex overflow" crash in narrow columns
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Text(
-                    logs[index]['time']!,
-                    style: AppTextStyles.bodyText2.copyWith(color: Colors.grey),
-                  ),
-                ),
-                // trailing: Text(...), // <--- REMOVED THIS CAUSE OF ERROR
-              );
-            },
-            separatorBuilder: (context, index) => Divider(height: 1),
-          ),
+
+        logsAsyncValue.when(
+          loading: () => Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Text('Error: $err', style: TextStyle(color: Colors.red)),
+          data: (logs) {
+            if (logs.isEmpty) return Text("No recent logs found.");
+
+            return Card(
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                itemCount: logs.length,
+                itemBuilder: (context, index) {
+                  final log = logs[index];
+                  final timeStr = DateFormat('h:mm a').format(log.timestamp);
+
+                  // Logic to check if the description already has "Carbs" text to avoid duplication
+                  // (Assuming backend might send "45g Carbs" or just "45")
+
+                  return ListTile(
+                    leading: Icon(
+                      log.type == 'Insulin' ? Icons.medication : Icons.restaurant,
+                      color: log.type == 'Insulin' ? Colors.blue : Colors.green,
+                    ),
+                    title: Text(
+                      log.description, // Backend sends "45g Carbs" based on your previous java code
+                      style: AppTextStyles.bodyText1,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      timeStr, // Just the time, removed the type
+                      style: AppTextStyles.bodyText2.copyWith(color: Colors.grey),
+                    ),
+                  );
+                },
+                separatorBuilder: (context, index) => Divider(height: 1),
+              ),
+            );
+          },
         ),
       ],
     );
