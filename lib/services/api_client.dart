@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'secure_storage_service.dart';
@@ -16,9 +17,11 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 class ApiClient {
   final SecureStorageService _storage;
   // Define your base URL here centrally
-  final String baseUrl = Platform.isAndroid
-      ? "http://10.0.2.2:8080/api/diabetes-management/api"
-      : "http://127.0.0.1:8080/api/diabetes-management/api";
+  String get baseUrl {
+    if (kIsWeb) return "http://1227.0.0.1:8080/api/diabetes-management/api";
+    if (Platform.isAndroid) return "http://10.0.2.2:8080/api/diabetes-management/api";
+    return "http://127.0.0.1:8080/api/diabetes-management/api";
+  }
 
   ApiClient(this._storage);
 
@@ -28,7 +31,7 @@ class ApiClient {
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token', // The Magic Line
+      if (token != null) 'Authorization': 'Bearer $token',
     };
   }
 
@@ -50,7 +53,23 @@ class ApiClient {
     return _handleResponse(response);
   }
 
-  // TODO: Generic PUT, DELETE... can be added similarly
+  // Generic PUT
+  Future<dynamic> put(String endpoint, dynamic data) async {
+    final uri = Uri.parse('$baseUrl$endpoint');
+    final headers = await _getHeaders();
+
+    final response = await http.put(uri, headers: headers, body: jsonEncode(data));
+    return _handleResponse(response);
+  }
+
+  // Generic DELETE
+  Future<dynamic> delete(String endpoint) async {
+    final uri = Uri.parse('$baseUrl$endpoint');
+    final headers = await _getHeaders();
+
+    final response = await http.delete(uri, headers: headers);
+    return _handleResponse(response);
+  }
 
   dynamic _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
