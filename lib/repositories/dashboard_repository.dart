@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/patient_profile.dart';
 import '../services/api_client.dart';
 import '../services/secure_storage_service.dart';
 import '../models/dashboard_models.dart';
@@ -45,12 +46,12 @@ class DashboardRepository {
     final patientId = await _getPatientId();
     final response = await _client.get('/patients/$patientId/dashboard/glucose/latest');
 
-    // FIX: Check for null response
+    // Check for null response
     if (response == null) {
       return GlucoseReading(
           value: 0,
           timestamp: DateTime.now(),
-          trend: 'STABLE'
+          trend: 'NULL'
       );
     }
 
@@ -76,7 +77,7 @@ class DashboardRepository {
     // FIX: Check for null response
     if (response == null) {
       return DashboardStats(
-          timeInRange: 0,
+          timeInRange: -99,
           timeBelowRange: 0,
           averageGlucose: 0
       );
@@ -95,6 +96,20 @@ class DashboardRepository {
     } catch (e) {
       print("Error fetching meals: $e");
       return []; // Return empty list on error to avoid crashing UI
+    }
+  }
+
+  Future<Patient?> getPatientProfile() async {
+    try {
+      final patientId = await _getPatientId();
+      final response = await _client.get('/patients/$patientId');
+
+      if (response == null) return null;
+
+      return Patient.fromJson(response);
+    } catch (e) {
+      print("Error fetching profile: $e");
+      return null;
     }
   }
 

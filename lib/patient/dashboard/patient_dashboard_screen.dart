@@ -9,6 +9,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/dashboard_models.dart';
+import '../../models/patient_profile.dart';
 
 class PatientDashboardScreen extends ConsumerWidget {
   const PatientDashboardScreen({super.key});
@@ -58,7 +59,7 @@ class _DashboardMobileBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
+            _buildHeader(data.patient),
             SizedBox(height: 24),
             _buildGlucoseCard(data.latestGlucose),
             SizedBox(height: 24),
@@ -84,7 +85,7 @@ class _DashboardDesktopBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
+            _buildHeader(data.patient),
             SizedBox(height: 24),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,13 +116,14 @@ class _DashboardDesktopBody extends StatelessWidget {
 
 // --- SHARED WIDGETS ---
 
-Widget _buildHeader() {
+Widget _buildHeader(Patient? patient) {
+  final name = patient?.firstName ?? 'Patient';
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text('Hello, Jessica', style: AppTextStyles.headline1), // Replace with actual user name
+      Text('Hello, $name', style: AppTextStyles.headline1),
       SizedBox(height: 4),
-      Text('Latest Activity', style: AppTextStyles.bodyText2), // Keep it
+      Text('Latest Activity', style: AppTextStyles.bodyText2),
     ],
   );
 }

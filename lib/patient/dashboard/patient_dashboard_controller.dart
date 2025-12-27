@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/patient_profile.dart';
 import '../../repositories/dashboard_repository.dart';
 import '../../models/dashboard_models.dart';
 
@@ -6,13 +7,16 @@ class DashboardState {
   final GlucoseReading? latestGlucose;
   final List<GlucoseReading> history;
   final DashboardStats? stats;
-  final List<RecentMeal> recentMeals; // Add this field
+  final List<RecentMeal> recentMeals;
+  final Patient? patient;
+
 
   DashboardState({
     this.latestGlucose,
     this.history = const [],
     this.stats,
-    this.recentMeals = const [], // Default empty
+    this.recentMeals = const [],
+    this.patient,
   });
 }
 
@@ -36,7 +40,8 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
         _repository.getLatestGlucose(),       // Index 0
         _repository.getGlucoseHistory(24),    // Index 1
         _repository.getStats(),               // Index 2
-        _repository.getRecentMeals(),         // Index 3 (New)
+        _repository.getRecentMeals(),         // Index 3
+        _repository.getPatientProfile(),
       ]);
 
       state = AsyncValue.data(DashboardState(
@@ -44,6 +49,7 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
         history: results[1] as List<GlucoseReading>,
         stats: results[2] as DashboardStats?,
         recentMeals: results[3] as List<RecentMeal>,
+        patient: results[4] as Patient?, // Assign Patient
       ));
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
