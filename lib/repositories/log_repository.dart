@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../models/food_log_request.dart';
+import '../models/insulin_log_request.dart';
 import '../models/log_entry_dto.dart';
 import '../services/secure_storage_service.dart';
 
@@ -76,4 +77,24 @@ class LogRepository {
       throw Exception('Network error: $e');
     }
   }
+
+
+  Future<void> createInsulinLog(String patientId, InsulinLogRequest request) async {
+    final url = Uri.parse('$_baseUrl/api/patients/$patientId/logs/insulin');
+    final token = await _storage.getToken();
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(request.toJson()),
+    );
+
+    if (response.statusCode != 201) {
+      throw Exception('Failed to log insulin: ${response.body}');
+    }
+  }
+
 }
