@@ -393,42 +393,117 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
 }
 
 // --- INSULIN LOG VIEW ---
-class _InsulinLogView extends StatefulWidget {
+class _InsulinLogView extends ConsumerStatefulWidget {
   const _InsulinLogView();
 
   @override
-  State<_InsulinLogView> createState() => _InsulinLogViewState();
+  ConsumerState<_InsulinLogView> createState() => _InsulinLogViewState();
 }
 
-class _InsulinLogViewState extends State<_InsulinLogView> {
+class _InsulinLogViewState extends ConsumerState<_InsulinLogView> {
   final TextEditingController _doseController = TextEditingController();
-  String _insulinType = 'Rapid-acting';
+
+  // Map Display Name -> Backend UUID
+  // In a real app, you would fetch this Map from the backend (GET /patients/{id}/medications)
+  // For now, we hardcode popular Polish brands with Placeholder UUIDs.
+  // REPLACE THESE UUID STRINGS with actual IDs from your 'medication' table in Postgres.
+  final Map<String, String> _insulinOptions = {
+    'Novorapid (Aspart)': '11111111-1111-1111-1111-111111111111',
+    'Humalog (Lispro)':   '22222222-2222-2222-2222-222222222222',
+    'Fiasp (Fast Aspart)':'33333333-3333-3333-3333-333333333333',
+    'Lantus (Glargine)':  '44444444-4444-4444-4444-444444444444',
+    'Abasaglar (Glargine)':'55555555-5555-5555-5555-555555555555',
+    'Toujeo':             '66666666-6666-6666-6666-666666666666',
+    'Tresiba (Degludec)': '77777777-7777-7777-7777-777777777777',
+    'Mixtard 30':         '88888888-8888-8888-8888-888888888888',
+  };
+
+  String? _selectedName;
+  String? _selectedId;
+
+  @override
+  void initState() {
+    super.initState();
+    // Default to the first one
+    _selectedName = _insulinOptions.keys.first;
+    _selectedId = _insulinOptions.values.first;
+  }
 
   void _submitDose() {
-    if (_doseController.text.isNotEmpty) {
-      _doseController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Dose Logged!")));
-    }
+    if (_selectedId == null) return;
+
+    // Call the controller
+    ref.read(foodLogControllerProvider.notifier).submitInsulin(
+      medicationId: _selectedId!,
+      medicationName: _selectedName!,
+      unitsStr: _doseController.text,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // 1. Listen for Success/Error (reusing the same controller state as Food)
+    ref.listen<FoodLogState>(foodLogControllerProvider, (previous, next) {
+      if (next is FoodLogSuccess) {
+        _doseController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("Insulin Logged: ${next.message}"),
+          backgroundColor: Colors.green,
+        ));
+        ref.read(foodLogControllerProvider.notifier).resetState();
+      } else if (next is FoodLogError) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(next.message),
+          backgroundColor: Colors.red,
+        ));
+      }
+    });
+
+    final state = ref.watch(foodLogControllerProvider);
+    final bool isLoading = state is FoodLogLoading;
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // 1. BRAND DROPDOWN
           DropdownButtonFormField<String>(
-            value: _insulinType,
-            items: ['Rapid-acting', 'Basal'].map((String value) {
-              return DropdownMenuItem<String>(value: value, child: Text(value));
+            value: _selectedName,
+            isExpanded: true,
+            items: _insulinOptions.keys.map((String key) {
+              return DropdownMenuItem<String>(
+                value: key,
+                child: Text(key, overflow: TextOverflow.ellipsis),
+              );
             }).toList(),
-            onChanged: (val) => setState(() => _insulinType = val!),
-            decoration: InputDecoration(labelText: 'Insulin Type', border: OutlineInputBorder()),
+            onChanged: (val) {
+              setState(() {
+                _selectedName = val;
+                _selectedId = _insulinOptions[val];
+              });
+            },
+            decoration: InputDecoration(
+                labelText: 'Insulin Type (Poland)',
+                border: OutlineInputBorder()
+            ),
           ),
+
           SizedBox(height: 16),
-          CustomTextFormField(labelText: 'Dose (Units)', controller: _doseController, keyboardType: TextInputType.number),
+
+          // 2. DOSE INPUT
+          CustomTextFormField(
+            labelText: 'Dose (Units)',
+            controller: _doseController,
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
+          ),
+
           SizedBox(height: 16),
-          CustomElevatedButton(onPressed: _submitDose, text: 'Log Dose'),
+
+          // 3. SUBMIT BUTTON
+          CustomElevatedButton(
+              onPressed: isLoading ? () {} : _submitDose,
+              text: isLoading ? 'Saving...' : 'Log Dose'
+          ),
         ],
       ),
     );
