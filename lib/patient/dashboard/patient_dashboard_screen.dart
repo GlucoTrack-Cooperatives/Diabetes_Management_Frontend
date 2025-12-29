@@ -128,45 +128,6 @@ Widget _buildHeader(Patient? patient) {
   );
 }
 
-// Widget _buildGlucoseCard() {
-//   return Card(
-//     color: AppColors.primary.withOpacity(0.1),
-//     elevation: 0,
-//     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-//     child: Padding(
-//       padding: const EdgeInsets.all(16.0),
-//       child: Row(
-//         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//         children: [
-//           Column(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               Text('Current Glucose', style: AppTextStyles.bodyText2),
-//               SizedBox(height: 8),
-//               Row(
-//                 crossAxisAlignment: CrossAxisAlignment.baseline,
-//                 textBaseline: TextBaseline.alphabetic,
-//                 children: [
-//                   Text('5.8', style: AppTextStyles.headline1.copyWith(fontSize: 32)),
-//                   SizedBox(width: 8),
-//                   Text('mmol/L', style: AppTextStyles.bodyText1),
-//                 ],
-//               ),
-//             ],
-//           ),
-//           Row(
-//             children: [
-//               Icon(Icons.arrow_upward, color: Colors.red, size: 20),
-//               SizedBox(width: 4),
-//               Text('+0.2', style: AppTextStyles.bodyText1.copyWith(color: Colors.red)),
-//             ],
-//           )
-//         ],
-//       ),
-//     ),
-//   );
-// }
-
 Widget _buildGlucoseCard(GlucoseReading? glucose) {
   if (glucose == null) {
     return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text("No Data")));
