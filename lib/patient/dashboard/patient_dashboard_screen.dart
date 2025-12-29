@@ -1,3 +1,4 @@
+import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_controller.dart';
 import 'package:diabetes_management_system/theme/app_colors.dart';
 import 'package:diabetes_management_system/theme/app_text_styles.dart';
 import 'package:diabetes_management_system/utils/responsive_layout.dart';
@@ -5,16 +6,41 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:csv/csv.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PatientDashboardScreen extends StatelessWidget {
+import '../../models/dashboard_models.dart';
+import '../../models/patient_profile.dart';
+
+class PatientDashboardScreen extends ConsumerWidget {
   const PatientDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Uses ResponsiveLayout for different screen sizes
-    return ResponsiveLayout(
-      mobileBody: _DashboardMobileBody(),
-      desktopBody: _DashboardDesktopBody(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 1. Watch the Controller for Real Data
+    final dashboardState = ref.watch(dashboardControllerProvider);
+
+    return Scaffold(
+      body: dashboardState.when(
+        // Loading & Error States
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Error: $err', style: const TextStyle(color: Colors.red)),
+              TextButton(
+                onPressed: () => ref.read(dashboardControllerProvider.notifier).refreshData(),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+        // Success State: Pass data to bodies
+        data: (data) => ResponsiveLayout(
+          mobileBody: _DashboardMobileBody(data: data),
+          desktopBody: _DashboardDesktopBody(data: data),
+        ),
+      ),
     );
   }
 }
@@ -22,6 +48,9 @@ class PatientDashboardScreen extends StatelessWidget {
 // --- RESPONSIVE LAYOUTS ---
 
 class _DashboardMobileBody extends StatelessWidget {
+  final DashboardState data;
+  const _DashboardMobileBody({required this.data});
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -30,11 +59,11 @@ class _DashboardMobileBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
+            _buildHeader(data.patient),
             SizedBox(height: 24),
-            _buildGlucoseCard(),
+            _buildGlucoseCard(data.latestGlucose),
             SizedBox(height: 24),
-            _buildNutritionSection(),
+            _buildNutritionSection(data.recentMeals),
             SizedBox(height: 24),
             _GlucoseMonitoringSection(),
           ],
@@ -45,6 +74,9 @@ class _DashboardMobileBody extends StatelessWidget {
 }
 
 class _DashboardDesktopBody extends StatelessWidget {
+  final DashboardState data;
+  const _DashboardDesktopBody({required this.data});
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -53,7 +85,7 @@ class _DashboardDesktopBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
+            _buildHeader(data.patient),
             SizedBox(height: 24),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,9 +99,9 @@ class _DashboardDesktopBody extends StatelessWidget {
                   flex: 1,
                   child: Column(
                     children: [
-                      _buildGlucoseCard(),
+                      _buildGlucoseCard(data.latestGlucose),
                       SizedBox(height: 16),
-                      _buildNutritionSection(),
+                      _buildNutritionSection(data.recentMeals),
                     ],
                   ),
                 ),
@@ -84,18 +116,64 @@ class _DashboardDesktopBody extends StatelessWidget {
 
 // --- SHARED WIDGETS ---
 
-Widget _buildHeader() {
+Widget _buildHeader(Patient? patient) {
+  final name = patient?.firstName ?? 'Patient';
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text('Hello, Jessica', style: AppTextStyles.headline1),
+      Text('Hello, $name', style: AppTextStyles.headline1),
       SizedBox(height: 4),
       Text('Latest Activity', style: AppTextStyles.bodyText2),
     ],
   );
 }
 
-Widget _buildGlucoseCard() {
+// Widget _buildGlucoseCard() {
+//   return Card(
+//     color: AppColors.primary.withOpacity(0.1),
+//     elevation: 0,
+//     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+//     child: Padding(
+//       padding: const EdgeInsets.all(16.0),
+//       child: Row(
+//         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//         children: [
+//           Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Text('Current Glucose', style: AppTextStyles.bodyText2),
+//               SizedBox(height: 8),
+//               Row(
+//                 crossAxisAlignment: CrossAxisAlignment.baseline,
+//                 textBaseline: TextBaseline.alphabetic,
+//                 children: [
+//                   Text('5.8', style: AppTextStyles.headline1.copyWith(fontSize: 32)),
+//                   SizedBox(width: 8),
+//                   Text('mmol/L', style: AppTextStyles.bodyText1),
+//                 ],
+//               ),
+//             ],
+//           ),
+//           Row(
+//             children: [
+//               Icon(Icons.arrow_upward, color: Colors.red, size: 20),
+//               SizedBox(width: 4),
+//               Text('+0.2', style: AppTextStyles.bodyText1.copyWith(color: Colors.red)),
+//             ],
+//           )
+//         ],
+//       ),
+//     ),
+//   );
+// }
+
+Widget _buildGlucoseCard(GlucoseReading? glucose) {
+  if (glucose == null) {
+    return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text("No Data")));
+  }
+
+  final double mmolValue = glucose.value / 18.0;
+
   return Card(
     color: AppColors.primary.withOpacity(0.1),
     elevation: 0,
@@ -109,60 +187,109 @@ Widget _buildGlucoseCard() {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Current Glucose', style: AppTextStyles.bodyText2),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
-                  Text('5.8', style: AppTextStyles.headline1.copyWith(fontSize: 32)),
-                  SizedBox(width: 8),
+                  Text(
+                      mmolValue.toStringAsFixed(1),
+                      style: AppTextStyles.headline1.copyWith(fontSize: 32)
+                  ),
+                  const SizedBox(width: 8),
                   Text('mmol/L', style: AppTextStyles.bodyText1),
                 ],
               ),
             ],
           ),
-          Row(
-            children: [
-              Icon(Icons.arrow_upward, color: Colors.red, size: 20),
-              SizedBox(width: 4),
-              Text('+0.2', style: AppTextStyles.bodyText1.copyWith(color: Colors.red)),
-            ],
-          )
+          // Trend Arrow Logic
+          if (glucose.trend != null)
+            Row(
+              children: [
+                Icon(
+                    _getTrendIcon(glucose.trend!),
+                    color: _getTrendColor(glucose.trend!),
+                    size: 24
+                ),
+                const SizedBox(width: 4),
+                Text(glucose.trend!, style: AppTextStyles.bodyText1.copyWith(color: _getTrendColor(glucose.trend!))),
+              ],
+            )
         ],
       ),
     ),
   );
 }
 
-Widget _buildNutritionSection() {
+// Helper for Trend Icons
+IconData _getTrendIcon(String trend) {
+  switch (trend.toUpperCase()) {
+    case 'RISING': return Icons.arrow_upward;
+    case 'FALLING': return Icons.arrow_downward;
+    case 'STABLE': return Icons.arrow_forward;
+    default: return Icons.horizontal_rule;
+  }
+}
+
+Color _getTrendColor(String trend) {
+  return trend.toUpperCase() == 'RISING' ? Colors.red : Colors.green;
+}
+
+Widget _buildNutritionSection(List<RecentMeal> meals) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text('Today\'s Nutrition', style: AppTextStyles.headline2),
-      SizedBox(height: 12),
+      const SizedBox(height: 12),
       Card(
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         clipBehavior: Clip.antiAlias,
-        child: Column(
+        child: meals.isEmpty
+            ? const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text("No meals logged today"),
+        )
+            : Column(
           children: [
-            ListTile(
-              title: Text('Oatmeal with Berries', style: AppTextStyles.bodyText1),
-              subtitle: Text('45g carbs', style: AppTextStyles.bodyText2),
-              trailing: Text('GL: 25', style: AppTextStyles.bodyText1),
-            ),
-            Divider(height: 1),
-            ListTile(
-              title: Text('Grilled Chicken Salad', style: AppTextStyles.bodyText1),
-              subtitle: Text('15g carbs', style: AppTextStyles.bodyText2),
-              trailing: Text('GL: 5', style: AppTextStyles.bodyText1),
-            ),
+            for (int i = 0; i < meals.length; i++) ...[
+              ListTile(
+                title: Text(
+                  meals[i].description, // "Oatmeal with Berries"
+                  style: AppTextStyles.bodyText1,
+                ),
+                subtitle: Text(
+                  meals[i].carbs, // "45g Carbs" (from Backend)
+                  style: AppTextStyles.bodyText2,
+                ),
+                trailing: Text(
+                  'GL: 0', // TODO(): Calc this hardcoded value by AI?
+                  style: AppTextStyles.bodyText1,
+                ),
+              ),
+              // Add divider only if it's not the last item
+              if (i < meals.length - 1)
+                const Divider(height: 1),
+            ]
           ],
         ),
       )
     ],
   );
 }
+Widget _buildStatRow(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: AppTextStyles.bodyText1),
+        Text(value, style: AppTextStyles.headline2.copyWith(fontSize: 16)),
+      ],
+    ),
+  );
+}
+
 
 class _GlucoseMonitoringSection extends StatefulWidget {
   @override
