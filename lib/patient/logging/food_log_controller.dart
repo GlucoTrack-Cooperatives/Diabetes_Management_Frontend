@@ -3,6 +3,8 @@ import 'package:diabetes_management_system/models/food_log_request.dart';
 import 'package:diabetes_management_system/repositories/log_repository.dart';
 import 'package:diabetes_management_system/services/secure_storage_service.dart';
 import 'package:diabetes_management_system/models/log_entry_dto.dart';
+import 'package:diabetes_management_system/models/insulin_log_request.dart';
+
 
 // --- FOOD LOG'
 
@@ -28,6 +30,56 @@ class FoodLogController extends StateNotifier<FoodLogState> {
 
   FoodLogController(this.ref, this._repository, this._storage) : super(FoodLogInitial());
 
+  // --- NEW INSULIN METHOD ---
+  Future<void> submitInsulin({
+    required String medicationId,
+    required String medicationName, // For the success message
+    required String unitsStr,
+  }) async {
+    // A. Validation
+    if (unitsStr.isEmpty) {
+      state = FoodLogError("Please enter the number of units.");
+      return;
+    }
+
+    state = FoodLogLoading();
+
+    try {
+      final patientId = await _storage.getUserId();
+      if (patientId == null) {
+        state = FoodLogError("Session expired.");
+        return;
+      }
+
+      final double units = double.tryParse(unitsStr) ?? 0.0;
+      if (units <= 0) {
+        state = FoodLogError("Units must be greater than 0.");
+        return;
+      }
+
+      // B. Create Request
+      final request = InsulinLogRequest(
+        medicationId: medicationId,
+        units: units,
+      );
+
+      // C. Call API
+      // Ensure you added createInsulinLog to your repository in Step 2
+      await _repository.createInsulinLog(patientId, request);
+
+      // D. Success
+      state = FoodLogSuccess("$units U - $medicationName");
+
+      // Refresh the recent logs list
+      ref.invalidate(recentLogsProvider);
+
+    } catch (e) {
+      state = FoodLogError("Failed to log insulin: $e");
+    }
+  }
+  // --- END NEW INSULIN METHOD ---
+
+  // --- NEW FOOD LOG METHOD ---
   Future<void> submitLog({
     required String description,
     required String carbsStr,
