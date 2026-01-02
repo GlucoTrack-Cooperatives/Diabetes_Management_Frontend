@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:diabetes_management_system/models/log_entry_dto.dart';
+
 
 // Services
 import 'package:diabetes_management_system/services/spoonacular_service.dart';
@@ -247,8 +247,8 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
     });
 
     // 2. Watch the state to handle Loading UI
-    final state = ref.watch(foodLogControllerProvider);
-    final bool isLoading = state is FoodLogLoading;
+    // final state = ref.watch(foodLogControllerProvider);
+    // final bool isLoading = state is FoodLogLoading;
 
     return SingleChildScrollView(
       child: Column(

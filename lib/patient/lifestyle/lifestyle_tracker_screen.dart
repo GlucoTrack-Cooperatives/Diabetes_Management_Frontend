@@ -86,7 +86,6 @@ class _DesktopLifestyleBody extends StatelessWidget {
 // Reusable Card Widgets
 
 const double _cardHeight = 160.0;
-const double _cardWidth = 200.0;
 
 class _SleepCard extends StatelessWidget {
   @override
