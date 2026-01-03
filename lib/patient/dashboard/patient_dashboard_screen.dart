@@ -1,3 +1,5 @@
+import 'package:diabetes_management_system/models/dashboard_models.dart';
+import 'package:diabetes_management_system/models/patient_profile.dart';
 import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_controller.dart';
 import 'package:diabetes_management_system/theme/app_colors.dart';
 import 'package:diabetes_management_system/theme/app_text_styles.dart';
@@ -7,9 +9,6 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:csv/csv.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../models/dashboard_models.dart';
-import '../../models/patient_profile.dart';
 
 class PatientDashboardScreen extends ConsumerWidget {
   const PatientDashboardScreen({super.key});
