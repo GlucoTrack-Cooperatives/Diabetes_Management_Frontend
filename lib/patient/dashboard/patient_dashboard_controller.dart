@@ -32,7 +32,10 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
   }
 
   Future<void> refreshData({int historyHours = 24}) async {
-    if (state.hasValue) state = const AsyncValue.loading();
+    // A "hard" refresh that shows a loading spinner is only needed on the initial load.
+    if (!state.hasValue) {
+      state = const AsyncValue.loading();
+    }
 
     try {
       // Fetch everything in parallel

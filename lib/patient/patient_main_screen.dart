@@ -3,6 +3,7 @@ import 'package:diabetes_management_system/patient/communication/patient_chat_sc
 import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_screen.dart';
 import 'package:diabetes_management_system/patient/lifestyle/lifestyle_tracker_screen.dart';
 import 'package:diabetes_management_system/patient/logging/food_insulin_log_screen.dart';
+import 'package:diabetes_management_system/patient/settings/patient_settings_screen.dart';
 import 'package:diabetes_management_system/theme/app_colors.dart';
 import 'package:diabetes_management_system/utils/responsive_layout.dart';
 import 'package:diabetes_management_system/widgets/patient_bottom_nav.dart';
@@ -59,6 +60,28 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
     }
   }
 
+  void _navigateToSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const PatientSettingsScreen()),
+    );
+  }
+
+  List<Widget> _buildAppBarActions() {
+    return [
+      IconButton(
+        icon: const Icon(Icons.settings, color: Colors.grey),
+        tooltip: "Settings",
+        onPressed: _navigateToSettings, // Connects to the new screen
+      ),
+      IconButton(
+        icon: const Icon(Icons.logout, color: Colors.redAccent),
+        tooltip: "Logout",
+        onPressed: _handleLogout,
+      ),
+      const SizedBox(width: 8),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return ResponsiveLayout(
@@ -72,14 +95,7 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_widgetTitles.elementAt(_selectedIndex)),
-        actions: [
-          // LOGOUT BUTTON (Mobile)
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.redAccent),
-            tooltip: "Logout",
-            onPressed: _handleLogout,
-          ),
-        ],
+        actions: _buildAppBarActions(),
       ),
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
@@ -131,13 +147,8 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
               appBar: AppBar(
                 title: Text(_widgetTitles.elementAt(_selectedIndex)),
                 actions: [
-                  // LOGOUT BUTTON (Desktop)
-                  IconButton(
-                    icon: const Icon(Icons.logout, color: Colors.redAccent),
-                    tooltip: "Logout",
-                    onPressed: _handleLogout,
-                  ),
-                  const SizedBox(width: 16), // Padding for desktop
+                  ..._buildAppBarActions(), // Use updated actions
+                  const SizedBox(width: 16),
                 ],
               ),
               body: Center(

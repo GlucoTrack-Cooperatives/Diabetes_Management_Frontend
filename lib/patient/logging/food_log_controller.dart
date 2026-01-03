@@ -1,3 +1,4 @@
+import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diabetes_management_system/models/food_log_request.dart';
 import 'package:diabetes_management_system/repositories/log_repository.dart';
@@ -72,6 +73,7 @@ class FoodLogController extends StateNotifier<FoodLogState> {
 
       // Refresh the recent logs list
       ref.invalidate(recentLogsProvider);
+      ref.read(dashboardControllerProvider.notifier).refreshData();
 
     } catch (e) {
       state = FoodLogError("Failed to log insulin: $e");
@@ -121,6 +123,7 @@ class FoodLogController extends StateNotifier<FoodLogState> {
       state = FoodLogSuccess("${carbs}g Carbs - $description");
 
       ref.invalidate(recentLogsProvider);
+      ref.read(dashboardControllerProvider.notifier).refreshData();
 
     } catch (e) {
       state = FoodLogError("Failed to submit log: $e");
