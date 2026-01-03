@@ -1,3 +1,4 @@
+import 'package:diabetes_management_system/auth/login/login_screen.dart';
 import 'package:diabetes_management_system/physician/communication/physician_chat_screen.dart';
 import 'package:diabetes_management_system/physician/dashboard/physician_triage_dashboard_screen.dart';
 import 'package:diabetes_management_system/theme/app_colors.dart';
@@ -5,15 +6,18 @@ import 'package:diabetes_management_system/utils/responsive_layout.dart';
 import 'package:diabetes_management_system/widgets/physician_bottom_nav.dart';
 import 'package:diabetes_management_system/widgets/side_navigation_drawer.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PhysicianMainScreen extends StatefulWidget {
+import '../auth/login/login_controller.dart';
+
+class PhysicianMainScreen extends ConsumerStatefulWidget {
   const PhysicianMainScreen({super.key});
 
   @override
-  _PhysicianMainScreenState createState() => _PhysicianMainScreenState();
+  ConsumerState<PhysicianMainScreen> createState() => _PhysicianMainScreenState();
 }
 
-class _PhysicianMainScreenState extends State<PhysicianMainScreen> {
+class _PhysicianMainScreenState extends ConsumerState<PhysicianMainScreen> {
   int _selectedIndex = 0;
 
   static final List<Widget> _widgetOptions = <Widget>[
@@ -32,6 +36,17 @@ class _PhysicianMainScreenState extends State<PhysicianMainScreen> {
     });
   }
 
+  Future<void> _handleLogout() async {
+    await ref.read(loginControllerProvider.notifier).logout();
+
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ResponsiveLayout(
@@ -44,18 +59,23 @@ class _PhysicianMainScreenState extends State<PhysicianMainScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_widgetTitles.elementAt(_selectedIndex)),
-        actions: _selectedIndex == 0
-            ? [
-                IconButton(
-                  icon: Icon(Icons.search),
-                  onPressed: () {},
-                ),
-                IconButton(
-                  icon: Icon(Icons.filter_list),
-                  onPressed: () {},
-                ),
-              ]
-            : null,
+        actions: [
+          if (_selectedIndex == 0) ...[
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () {},
+            ),
+            IconButton(
+              icon: const Icon(Icons.filter_list),
+              onPressed: () {},
+            ),
+          ],
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.redAccent),
+            tooltip: "Logout",
+            onPressed: _handleLogout,
+          ),
+        ],
       ),
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
@@ -95,18 +115,24 @@ class _PhysicianMainScreenState extends State<PhysicianMainScreen> {
             child: Scaffold(
               appBar: AppBar(
                 title: Text(_widgetTitles.elementAt(_selectedIndex)),
-                actions: _selectedIndex == 0
-                    ? [
-                        IconButton(
-                          icon: Icon(Icons.search),
-                          onPressed: () {},
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.filter_list),
-                          onPressed: () {},
-                        ),
-                      ]
-                    : null,
+                actions: [
+                  if (_selectedIndex == 0) ...[
+                    IconButton(
+                      icon: const Icon(Icons.search),
+                      onPressed: () {},
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.filter_list),
+                      onPressed: () {},
+                    ),
+                  ],
+                  IconButton(
+                    icon: const Icon(Icons.logout, color: Colors.redAccent),
+                    tooltip: "Logout",
+                    onPressed: _handleLogout,
+                  ),
+                  const SizedBox(width: 16),
+                ],
               ),
               body: Center(
                 child: _widgetOptions.elementAt(_selectedIndex),

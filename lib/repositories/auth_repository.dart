@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:diabetes_management_system/models/login_request.dart';
+import 'package:diabetes_management_system/models/physician_registration_request.dart';
+import 'package:diabetes_management_system/models/patient_registration_request.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,6 +28,28 @@ class AuthRepository {
 
   Future<void> registerPatient(PatientRegistrationRequest request) async {
     final url = Uri.parse('${_getBaseUrl()}/patients/sign-up');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+        body: jsonEncode(request.toJson()),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Registration successful
+        return;
+      } else {
+        // Parse backend error message if available
+        throw Exception('Registration Failed: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Connection Error: $e');
+    }
+  }
+
+  Future<void> registerPhysician(PhysicianRegistrationRequest request) async {
+    final url = Uri.parse('${_getBaseUrl()}/physicians/sign-up');
 
     try {
       final response = await http.post(
