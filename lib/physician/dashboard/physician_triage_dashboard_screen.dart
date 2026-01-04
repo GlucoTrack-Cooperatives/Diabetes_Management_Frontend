@@ -148,28 +148,56 @@ class _PatientList extends ConsumerWidget { // Change to ConsumerWidget
                 child: ListTile(
                   contentPadding: const EdgeInsets.all(16),
                   leading: CircleAvatar(
-                    backgroundColor: AppColors.primary,
-                    child: Text(patient.initials, style: const TextStyle(color: Colors.white)),
+                    backgroundColor: patient.isPhysicianConfirmed ? AppColors.primary : Colors.grey,
+                    child: Text(
+                        patient.fullName.isNotEmpty ? patient.fullName[0].toUpperCase() : '?',
+                        style: const TextStyle(color: Colors.white)
+                    ),
                   ),
                   title: Row(
                     children: [
-                      Text('${patient.fullName} (${patient.age}yo)', style: AppTextStyles.headline2),
+                      Text(
+                          '${patient.fullName} (${patient.age}yo)',
+                          style: AppTextStyles.headline2
+                      ),
+                      if (!patient.isPhysicianConfirmed) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.orange),
+                          ),
+                          child: const Text(
+                            "Pending",
+                            style: TextStyle(
+                                color: Colors.orange,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
-                  // Logic for stats/risk needs to come from backend eventually.
-                  // For now, we can show placeholder or basic info
-                  subtitle: const Padding(
-                    padding: EdgeInsets.only(top: 8.0),
-                    child: Text('Status: Active', style: AppTextStyles.bodyText2),
-                  ),
-                  trailing: const Chip(
-                    label: Text(
-                      'Monitoring', // Placeholder until backend sends risk calculation
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Phone: ${patient.phoneNumber}', style: AppTextStyles.bodyText2),
+                        if (patient.latestGlucoseValue != null)
+                          Text(
+                            'Latest Glucose: ${patient.latestGlucoseValue} mg/dL (${patient.latestGlucoseTrend})',
+                            style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+                          ),
+                      ],
                     ),
-                    backgroundColor: Colors.green, // Placeholder color
                   ),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
                   onTap: () {
+                    // Only allow navigation if confirmed, or show warning
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const PatientAnalysisScreen()),
@@ -184,4 +212,3 @@ class _PatientList extends ConsumerWidget { // Change to ConsumerWidget
     );
   }
 }
-
