@@ -25,4 +25,9 @@ class SettingsRepository {
       'dexcom_password': dexcomPassword,
     });
   }
+
+  Future<void> confirmPhysician(String patientId) async {
+    // Matches Backend: PUT /api/patients/{patientId}/confirm-physician
+    await _client.put('/patients/$patientId/confirm-physician', {});
+  }
 }

@@ -119,67 +119,69 @@ class PhysicianTriageDashboardScreen extends ConsumerWidget {
   }
 }
 
-class _PatientList extends StatelessWidget {
+class _PatientList extends ConsumerWidget { // Change to ConsumerWidget
   final bool isDesktop;
 
   const _PatientList({required this.isDesktop});
 
   @override
-  Widget build(BuildContext context) {
-    // ... (Your existing list code remains exactly the same) ...
-    // Mock Data
-    final List<Map<String, dynamic>> patients = [
-      {
-        'initials': 'JD',
-        'name': 'John Doe',
-        'age': '45yo',
-        'risk': 'HIGH RISK',
-        'riskColor': AppColors.error,
-        'stats': '7d Avg: 165 mg/dL | TIR: 65%'
-      },
-      // ... rest of your mock data
-    ];
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the data provider
+    final patientsAsync = ref.watch(physicianPatientsListProvider);
 
     return Padding(
       padding: EdgeInsets.all(isDesktop ? 24.0 : 16.0),
-      child: ListView.builder(
-        itemCount: patients.length,
-        itemBuilder: (context, index) {
-          final patient = patients[index];
-          return Card(
-            margin: EdgeInsets.only(bottom: 16),
-            child: ListTile(
-              contentPadding: EdgeInsets.all(16),
-              leading: CircleAvatar(
-                backgroundColor: AppColors.primary,
-                child: Text(patient['initials'], style: TextStyle(color: Colors.white)),
-              ),
-              title: Row(
-                children: [
-                  Text('${patient['name']} (${patient['age']})', style: AppTextStyles.headline2),
-                ],
-              ),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(patient['stats'], style: AppTextStyles.bodyText2),
-              ),
-              trailing: Chip(
-                label: Text(
-                  patient['risk'],
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      child: patientsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error loading patients: $err')),
+        data: (patients) {
+          if (patients.isEmpty) {
+            return const Center(child: Text("No patients assigned yet. Click 'Add Patient' to start."));
+          }
+
+          return ListView.builder(
+            itemCount: patients.length,
+            itemBuilder: (context, index) {
+              final patient = patients[index];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.primary,
+                    child: Text(patient.initials, style: const TextStyle(color: Colors.white)),
+                  ),
+                  title: Row(
+                    children: [
+                      Text('${patient.fullName} (${patient.age}yo)', style: AppTextStyles.headline2),
+                    ],
+                  ),
+                  // Logic for stats/risk needs to come from backend eventually.
+                  // For now, we can show placeholder or basic info
+                  subtitle: const Padding(
+                    padding: EdgeInsets.only(top: 8.0),
+                    child: Text('Status: Active', style: AppTextStyles.bodyText2),
+                  ),
+                  trailing: const Chip(
+                    label: Text(
+                      'Monitoring', // Placeholder until backend sends risk calculation
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                    backgroundColor: Colors.green, // Placeholder color
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PatientAnalysisScreen()),
+                    );
+                  },
                 ),
-                backgroundColor: patient['riskColor'],
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => PatientAnalysisScreen()),
-                );
-              },
-            ),
+              );
+            },
           );
         },
       ),
     );
   }
 }
+
