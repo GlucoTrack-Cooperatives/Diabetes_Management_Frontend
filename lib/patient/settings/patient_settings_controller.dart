@@ -39,4 +39,18 @@ class PatientSettingsController extends StateNotifier<AsyncValue<void>> {
       state = AsyncValue.error(e, stack);
     }
   }
+
+  Future<void> acceptPhysicianRequest(String patientId) async {
+    state = const AsyncValue.loading();
+    try {
+      await _repository.confirmPhysician(patientId);
+
+      // Important: Refresh the dashboard so the profile re-loads with isPhysicianConfirmed = true
+      await _ref.read(dashboardControllerProvider.notifier).refreshData();
+
+      state = const AsyncValue.data(null);
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+    }
+  }
 }

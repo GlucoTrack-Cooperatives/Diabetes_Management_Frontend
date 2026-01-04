@@ -1,3 +1,4 @@
+import 'package:diabetes_management_system/models/patient_profile.dart';
 import 'package:diabetes_management_system/models/patient_profile_update_request.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -159,6 +160,7 @@ class _PatientSettingsScreenState extends ConsumerState<PatientSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _buildPhysicianSection(data.patient!),
                   _buildSectionHeader("Personal Information"),
                   const SizedBox(height: 10),
                   CustomTextFormField(
@@ -249,6 +251,74 @@ class _PatientSettingsScreenState extends ConsumerState<PatientSettingsScreen> {
     return Text(
       title,
       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
+    );
+  }
+
+  Widget _buildPhysicianSection(Patient patient) {
+    // Case 1: No doctor assigned at all
+    if (patient.physicianName == null) {
+      return const SizedBox.shrink();
+    }
+
+    final isConfirmed = patient.isPhysicianConfirmed == true;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader("Medical Team"),
+        const SizedBox(height: 10),
+        Card(
+          elevation: 2,
+          color: isConfirmed ? Colors.white : Colors.orange.shade50, // Highlight if pending
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: AppColors.primary,
+                      child: Icon(Icons.medical_services, color: Colors.white),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Dr. ${patient.physicianName}",
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          Text(
+                            isConfirmed ? "Primary Physician" : "Requesting to connect...",
+                            style: TextStyle(
+                              color: isConfirmed ? Colors.grey : Colors.orange.shade800,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Show "Accept" button only if NOT confirmed
+                    if (!isConfirmed)
+                      ElevatedButton(
+                        onPressed: () {
+                          ref.read(patientSettingsControllerProvider.notifier)
+                              .acceptPhysicianRequest(patient.id);
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                        child: const Text("Accept"),
+                      )
+                    else
+                      const Icon(Icons.check_circle, color: Colors.green),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const Divider(height: 40, thickness: 2),
+      ],
     );
   }
 }

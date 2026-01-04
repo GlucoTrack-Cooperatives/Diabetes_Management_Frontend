@@ -7,6 +7,8 @@ class Patient {
   final String diagnosisDate;
   final String emergencyContactPhone;
   final String createdAt;
+  final String? physicianName;
+  final bool? isPhysicianConfirmed;
 
   Patient({
     required this.id,
@@ -17,6 +19,8 @@ class Patient {
     required this.diagnosisDate,
     required this.emergencyContactPhone,
     required this.createdAt,
+    this.physicianName,
+    this.isPhysicianConfirmed,
   });
 
   // Factory constructor to map JSON from Spring Boot
@@ -30,6 +34,8 @@ class Patient {
       diagnosisDate: json['diagnosisDate'] ?? '',
       emergencyContactPhone: json['emergencyContactPhone'] ?? '',
       createdAt: json['createdAt'] ?? '',
+      physicianName: json['physicianName'],
+      isPhysicianConfirmed: json['isPhysicianConfirmed'],
     );
   }
 }
