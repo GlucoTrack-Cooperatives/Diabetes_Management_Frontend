@@ -253,7 +253,7 @@ Widget _buildStatRow(String label, String value) {
 
 
 class _GlucoseMonitoringSection extends StatefulWidget {
-  final List<GlucoseReading> readings; // real data
+  final List<GlucoseReading> readings;
 
   const _GlucoseMonitoringSection({required this.readings});
 
@@ -264,43 +264,116 @@ class _GlucoseMonitoringSection extends StatefulWidget {
 class __GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
   String _selectedRange = '24H';
 
-  // Logic to convert backend data -> FlSpots based on range
-  List<FlSpot> _getVisibleSpots() {
+  // Constants for Time calculations (in milliseconds)
+  static const int _hourInMs = 3600000;
+  static const int _minuteInMs = 60000;
+
+  // 1. Filter AND Downsample Data based on selected range
+  List<FlSpot> _getVisibleSpots(double minX, double maxX) {
     if (widget.readings.isEmpty) return [];
 
-    final now = DateTime.now();
-    final Duration rangeDuration;
-    switch (_selectedRange) {
-      case '4H': rangeDuration = const Duration(hours: 4); break;
-      case '8H': rangeDuration = const Duration(hours: 8); break;
-      case '24H': default: rangeDuration = const Duration(hours: 24); break;
+    // Step A: Basic Range Filtering
+    final rawFiltered = widget.readings.where((r) {
+      final t = r.timestamp.millisecondsSinceEpoch.toDouble();
+      return t >= minX && t <= maxX;
+    }).toList();
+
+    // Sort oldest to newest
+    rawFiltered.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    if (rawFiltered.isEmpty) return [];
+
+    // Step B: Downsampling Logic
+    List<GlucoseReading> displayReadings = [];
+
+    // Define the "Resolution" based on the selected range
+    // 4H  -> Show everything (5 min resolution)
+    // 8H  -> Show every 15 mins
+    // 24H -> Show every 30 mins
+    int skipMinutes;
+    if (_selectedRange == '24H') {
+      skipMinutes = 30;
+    } else if (_selectedRange == '8H') {
+      skipMinutes = 15;
+    } else {
+      skipMinutes = 5; // Show all
     }
 
-    final cutoff = now.subtract(rangeDuration);
+    if (skipMinutes > 0) {
+      DateTime? lastAddedTime;
 
-    // 1. Filter by time
-    final filtered = widget.readings.where((r) => r.timestamp.isAfter(cutoff)).toList();
+      for (var reading in rawFiltered) {
+        if (lastAddedTime == null) {
+          displayReadings.add(reading);
+          lastAddedTime = reading.timestamp;
+        } else {
+          final difference = reading.timestamp.difference(lastAddedTime).inMinutes;
+          // Only add if enough time has passed since the last point
+          if (difference >= skipMinutes) {
+            displayReadings.add(reading);
+            lastAddedTime = reading.timestamp;
+          }
+        }
+      }
+    } else {
+      displayReadings = rawFiltered;
+    }
 
-    // 2. Sort by time (Oldest -> Newest)
-    filtered.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-    // 3. Map to Chart Spots
-    return filtered.map((r) {
+    // Step C: Convert to Spots (Value / 18.0 for mmol/L)
+    return displayReadings.map((r) {
       return FlSpot(
-        // Use milliseconds for smooth X-axis that handles midnight crossing
         r.timestamp.millisecondsSinceEpoch.toDouble(),
-        // Convert mg/dL to mmol/L
         r.value / 18.0,
       );
     }).toList();
   }
 
+  // 2. Calculate Axis Boundaries (Snapping to round numbers)
+  (double minX, double maxX, double interval) _getAxisDetails() {
+    final now = DateTime.now();
+
+    // We snap the 'Max' time to the next logical block so the graph looks "finished"
+    // e.g., if it's 10:15, 4H graph extends to 10:30 or 11:00.
+    DateTime snappedMax;
+    Duration rangeDuration;
+    double intervalMs;
+
+    switch (_selectedRange) {
+      case '4H':
+      // Snap to next 30 minutes
+        final remainder = 30 - (now.minute % 30);
+        snappedMax = now.add(Duration(minutes: remainder)).subtract(Duration(seconds: now.second, milliseconds: now.millisecond));
+        rangeDuration = const Duration(hours: 4);
+        intervalMs = 30 * _minuteInMs.toDouble(); // 30 Minute interval
+        break;
+      case '8H':
+      // Snap to next hour
+        final remainder = 60 - now.minute;
+        snappedMax = now.add(Duration(minutes: remainder)).subtract(Duration(seconds: now.second, milliseconds: now.millisecond));
+        rangeDuration = const Duration(hours: 8);
+        intervalMs = _hourInMs.toDouble(); // 1 Hour interval
+        break;
+      case '24H':
+      default:
+      // Snap to next hour
+        final remainder = 60 - now.minute;
+        snappedMax = now.add(Duration(minutes: remainder)).subtract(Duration(seconds: now.second, milliseconds: now.millisecond));
+        rangeDuration = const Duration(hours: 24);
+        intervalMs = 4 * _hourInMs.toDouble(); // 4 Hour interval (to fit screen)
+        break;
+    }
+
+    final maxX = snappedMax.millisecondsSinceEpoch.toDouble();
+    final minX = snappedMax.subtract(rangeDuration).millisecondsSinceEpoch.toDouble();
+
+    return (minX, maxX, intervalMs);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final spots = _getVisibleSpots();
-    // Calculate min/max X for the chart window (optional, helps axis scaling)
-    final double? minX = spots.isNotEmpty ? spots.first.x : null;
-    final double? maxX = spots.isNotEmpty ? spots.last.x : null;
+    // Get calculated boundaries
+    final (minX, maxX, interval) = _getAxisDetails();
+    final spots = _getVisibleSpots(minX, maxX);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,53 +400,91 @@ class __GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
 
         // The Chart
         SizedBox(
-          height: 250, // Slightly taller for better visibility
-          child: spots.isEmpty
-              ? const Center(child: Text("No glucose data in this range"))
-              : LineChart(
+          height: 250,
+          child: LineChart(
             LineChartData(
+              // 3. Tooltip Formatting (1 decimal place)
+              lineTouchData: LineTouchData(
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+                    return touchedBarSpots.map((barSpot) {
+                      return LineTooltipItem(
+                        barSpot.y.toStringAsFixed(1), // Logic: 1 decimal place
+                        const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold
+                        ),
+                      );
+                    }).toList();
+                  },
+                ),
+                handleBuiltInTouches: true,
+              ),
+
               gridData: FlGridData(
                 show: true,
-                drawVerticalLine: false,
-                horizontalInterval: 2, // Lines every 2 mmol/L
+                drawVerticalLine: true,
+                verticalInterval: interval, // Grid lines align with round hours
+                horizontalInterval: 2,
+                getDrawingVerticalLine: (value) {
+                  return FlLine(color: Colors.grey.withOpacity(0.2), strokeWidth: 1);
+                },
+                getDrawingHorizontalLine: (value) {
+                  return FlLine(color: Colors.grey.withOpacity(0.2), strokeWidth: 1);
+                },
               ),
+
               titlesData: FlTitlesData(
-                rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+
+                // Left Y-Axis Titles
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    interval: 2,
+                    interval: 2, // Every 2 mmol/L
                     reservedSize: 32,
                     getTitlesWidget: (value, meta) {
-                      return Text(value.toInt().toString(), style: AppTextStyles.bodyText2);
+                      // Only show integer values for cleaner axis
+                      if (value % 2 == 0) {
+                        return Text(value.toInt().toString(), style: AppTextStyles.bodyText2);
+                      }
+                      return const SizedBox.shrink();
                     },
                   ),
                 ),
+
+                // Bottom X-Axis Titles (Time)
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: 30,
-                    // Dynamic interval based on range
-                    interval: _selectedRange == '24H' ? 14400000 : 7200000, // 4 hours or 2 hours in ms
+                    interval: interval, // Use the calculated interval (30m, 1h, or 4h)
                     getTitlesWidget: (value, meta) {
+                      // Avoid showing label if it falls outside our snapped range
+                      if (value < minX || value > maxX) return const SizedBox.shrink();
+
                       final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
                       return Padding(
                         padding: const EdgeInsets.only(top: 8.0),
                         child: Text(
                           DateFormat('HH:mm').format(date),
-                          style: AppTextStyles.bodyText2,
+                          style: AppTextStyles.bodyText2.copyWith(fontSize: 10),
                         ),
                       );
                     },
                   ),
                 ),
               ),
+
               borderData: FlBorderData(show: false),
+
+              // 4. Set Fixed Boundaries
               minX: minX,
               maxX: maxX,
-              minY: 0,   // Fix Y-axis to realistic glucose range
-              maxY: 20,  // Approx 360 mg/dL
+              minY: 0,
+              maxY: 20, // Approx 360 mg/dL - reasonable cap for mmol/L
+
               lineBarsData: [
                 LineChartBarData(
                   spots: spots,
@@ -382,7 +493,7 @@ class __GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
                   color: AppColors.primary,
                   barWidth: 3,
                   isStrokeCapRound: true,
-                  dotData: FlDotData(show: false),
+                  dotData: const FlDotData(show: false),
                   belowBarData: BarAreaData(
                       show: true,
                       color: AppColors.primary.withOpacity(0.15)
@@ -396,6 +507,7 @@ class __GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
     );
   }
 }
+
 
 // class __GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
 //   List<FlSpot> _allData = [];
