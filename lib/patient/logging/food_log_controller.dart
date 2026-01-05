@@ -6,11 +6,10 @@ import 'package:diabetes_management_system/repositories/log_repository.dart';
 import 'package:diabetes_management_system/services/secure_storage_service.dart';
 import 'package:diabetes_management_system/models/log_entry_dto.dart';
 import 'package:diabetes_management_system/models/insulin_log_request.dart';
+import 'package:diabetes_management_system/models/medications_request.dart';
 import 'package:image_picker/image_picker.dart';
 
 
-// 1. Define the State
-// This helps the UI know what to show (Loading spinner? Success snackbar? Error message?)
 abstract class FoodLogState {}
 class FoodLogInitial extends FoodLogState {}
 class FoodLogLoading extends FoodLogState {}
@@ -32,7 +31,6 @@ class FoodLogError extends FoodLogState {
   FoodLogError(this.message);
 }
 
-// 2. Define the Controller Class
 class FoodLogController extends StateNotifier<FoodLogState> {
   final Ref ref;
   final LogRepository _repository;
@@ -72,10 +70,10 @@ class FoodLogController extends StateNotifier<FoodLogState> {
   // --- NEW INSULIN METHOD ---
   Future<void> submitInsulin({
     required String medicationId,
-    required String medicationName, // For the success message
+    required String medicationName,
     required String unitsStr,
   }) async {
-    // A. Validation
+
     if (unitsStr.isEmpty) {
       state = FoodLogError("Please enter the number of units.");
       return;
@@ -102,14 +100,11 @@ class FoodLogController extends StateNotifier<FoodLogState> {
         units: units,
       );
 
-      // C. Call API
-      // Ensure you added createInsulinLog to your repository in Step 2
       await _repository.createInsulinLog(patientId, request);
 
       // D. Success
       state = FoodLogSuccess("$units U - $medicationName");
 
-      // Refresh the recent logs list
       ref.invalidate(recentLogsProvider);
       ref.read(dashboardControllerProvider.notifier).refreshData();
 

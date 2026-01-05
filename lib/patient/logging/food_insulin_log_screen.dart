@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:diabetes_management_system/models/log_entry_dto.dart';
+import 'package:diabetes_management_system/models/medications_request.dart';
+import 'package:diabetes_management_system/repositories/log_repository.dart';
 
 // Services
 import 'package:diabetes_management_system/services/spoonacular_service.dart';
@@ -429,34 +431,14 @@ class _InsulinLogView extends ConsumerStatefulWidget {
 class _InsulinLogViewState extends ConsumerState<_InsulinLogView> {
   final TextEditingController _doseController = TextEditingController();
 
-  // Map Display Name -> Backend UUID
-  // In a real app, you would fetch this Map from the backend (GET /patients/{id}/medications)
-  // For now, we hardcode popular Polish brands with Placeholder UUIDs.
-  // REPLACE THESE UUID STRINGS with actual IDs from your 'medication' table in Postgres.
-  final Map<String, String> _insulinOptions = {
-    'Novorapid (Aspart)': '11111111-1111-1111-1111-111111111111',
-    'Humalog (Lispro)':   '22222222-2222-2222-2222-222222222222',
-    'Fiasp (Fast Aspart)':'33333333-3333-3333-3333-333333333333',
-    'Lantus (Glargine)':  '44444444-4444-4444-4444-444444444444',
-    'Abasaglar (Glargine)':'55555555-5555-5555-5555-555555555555',
-    'Toujeo':             '66666666-6666-6666-6666-666666666666',
-    'Tresiba (Degludec)': '77777777-7777-7777-7777-777777777777',
-    'Mixtard 30':         '88888888-8888-8888-8888-888888888888',
-  };
-
   String? _selectedName;
   String? _selectedId;
 
-  @override
-  void initState() {
-    super.initState();
-    // Default to the first one
-    _selectedName = _insulinOptions.keys.first;
-    _selectedId = _insulinOptions.values.first;
-  }
-
   void _submitDose() {
-    if (_selectedId == null) return;
+    if (_selectedId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please select a medication")));
+      return;
+    }
 
     // Call the controller
     ref.read(foodLogControllerProvider.notifier).submitInsulin(
@@ -488,30 +470,38 @@ class _InsulinLogViewState extends ConsumerState<_InsulinLogView> {
     final state = ref.watch(foodLogControllerProvider);
     final bool isLoading = state is FoodLogLoading;
 
+    final medicationsAsync = ref.watch(medicationsProvider);
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. BRAND DROPDOWN
-          DropdownButtonFormField<String>(
-            value: _selectedName,
-            isExpanded: true,
-            items: _insulinOptions.keys.map((String key) {
-              return DropdownMenuItem<String>(
-                value: key,
-                child: Text(key, overflow: TextOverflow.ellipsis),
+          // 1. BRAND DROPDOWN (Async)
+          medicationsAsync.when(
+            loading: () => Center(child: CircularProgressIndicator()),
+            error: (err, stack) => Text('Error loading medications: $err', style: TextStyle(color: Colors.red)),
+            data: (medications) {
+              return DropdownButtonFormField<String>(
+                value: _selectedId,
+                isExpanded: true,
+                items: medications.map((med) {
+                  return DropdownMenuItem<String>(
+                    value: med.id,
+                    child: Text(med.name, overflow: TextOverflow.ellipsis),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  setState(() {
+                    _selectedId = val;
+                    _selectedName = medications.firstWhere((m) => m.id == val).name;
+                  });
+                },
+                decoration: InputDecoration(
+                    labelText: 'Insulin Type',
+                    border: OutlineInputBorder()
+                ),
               );
-            }).toList(),
-            onChanged: (val) {
-              setState(() {
-                _selectedName = val;
-                _selectedId = _insulinOptions[val];
-              });
             },
-            decoration: InputDecoration(
-                labelText: 'Insulin Type (Poland)',
-                border: OutlineInputBorder()
-            ),
           ),
 
           SizedBox(height: 16),
