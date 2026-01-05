@@ -1,23 +1,32 @@
 import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_controller.dart';
+import 'package:diabetes_management_system/services/spoonacular_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diabetes_management_system/models/food_log_request.dart';
 import 'package:diabetes_management_system/repositories/log_repository.dart';
 import 'package:diabetes_management_system/services/secure_storage_service.dart';
 import 'package:diabetes_management_system/models/log_entry_dto.dart';
 import 'package:diabetes_management_system/models/insulin_log_request.dart';
+import 'package:image_picker/image_picker.dart';
 
-
-// --- FOOD LOG'
 
 // 1. Define the State
 // This helps the UI know what to show (Loading spinner? Success snackbar? Error message?)
 abstract class FoodLogState {}
 class FoodLogInitial extends FoodLogState {}
 class FoodLogLoading extends FoodLogState {}
+class FoodAnalysisLoading extends FoodLogState {}
 class FoodLogSuccess extends FoodLogState {
   final String message;
   FoodLogSuccess(this.message);
 }
+
+class FoodAnalysisSuccess extends FoodLogState {
+  final String description;
+  final String carbs;
+  final String calories;
+  FoodAnalysisSuccess({required this.description, required this.carbs, required this.calories});
+}
+
 class FoodLogError extends FoodLogState {
   final String message;
   FoodLogError(this.message);
@@ -28,8 +37,37 @@ class FoodLogController extends StateNotifier<FoodLogState> {
   final Ref ref;
   final LogRepository _repository;
   final SecureStorageService _storage;
+  final FoodAnalysisRepository _analysisRepository;
 
-  FoodLogController(this.ref, this._repository, this._storage) : super(FoodLogInitial());
+
+  FoodLogController(this.ref, this._repository, this._storage, this._analysisRepository) : super(FoodLogInitial());
+
+  // --- NEW: ANALYZE IMAGE METHOD ---
+  Future<void> analyzeImage(XFile image) async {
+    state = FoodAnalysisLoading();
+
+    try {
+      final patientId = await _storage.getUserId();
+      if (patientId == null) {
+        state = FoodLogError("Session expired.");
+        return;
+      }
+
+      final result = await _analysisRepository.analyzeFoodImage(patientId, image);
+
+      if (result != null) {
+        state = FoodAnalysisSuccess(
+          description: result['description'],
+          carbs: result['carbs'],
+          calories: result['calories'],
+        );
+      } else {
+        state = FoodLogError("Could not identify food.");
+      }
+    } catch (e) {
+      state = FoodLogError("Analysis failed: $e");
+    }
+  }
 
   // --- NEW INSULIN METHOD ---
   Future<void> submitInsulin({
@@ -155,5 +193,6 @@ final foodLogControllerProvider = StateNotifierProvider<FoodLogController, FoodL
     ref,
     ref.watch(logRepositoryProvider),
     ref.watch(storageServiceProvider),
+    ref.watch(foodAnalysisRepositoryProvider),
   );
 });
