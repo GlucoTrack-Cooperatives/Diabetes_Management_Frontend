@@ -30,4 +30,16 @@ class SettingsRepository {
     // Matches Backend: PUT /api/patients/{patientId}/confirm-physician
     await _client.put('/patients/$patientId/confirm-physician', {});
   }
+
+  // inside SettingsRepository class...
+
+  Future<void> updateAlertSettings(String patientId, Map<String, dynamic> data) async {
+    // Assuming you create a specific endpoint like: PUT /api/patients/{id}/alert-settings
+    final response = await _client.put('/patients/$patientId/alert-settings', data);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update alert settings');
+    }
+  }
+
 }
