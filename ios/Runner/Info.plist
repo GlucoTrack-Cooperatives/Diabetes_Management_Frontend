@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>This app needs access to your health data to track blood glucose levels, steps, heart rate, and other health metrics for diabetes management.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>This app needs permission to save health data like blood glucose readings and activity logs to your Health app.</string>
 </dict>
 </plist>
