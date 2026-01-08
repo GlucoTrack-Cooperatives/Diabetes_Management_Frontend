@@ -23,24 +23,6 @@ class DashboardRepository {
     return id;
   }
 
-  // Future<GlucoseReading> getLatestGlucose() async {
-  //   final patientId = await _getPatientId();
-  //   final response = await _client.get('/patients/$patientId/dashboard/glucose/latest');
-  //   return GlucoseReading.fromJson(response);
-  // }
-  //
-  // Future<List<GlucoseReading>> getGlucoseHistory(int hours) async {
-  //   final patientId = await _getPatientId();
-  //   final response = await _client.get('/patients/$patientId/dashboard/glucose/history?hours=$hours');
-  //   return (response as List).map((e) => GlucoseReading.fromJson(e)).toList();
-  // }
-  //
-  // Future<DashboardStats> getStats() async {
-  //   final patientId = await _getPatientId();
-  //   final response = await _client.get('/patients/$patientId/dashboard/stats');
-  //   return DashboardStats.fromJson(response);
-  // }
-
   // --- 1. LATEST GLUCOSE ---
   Future<GlucoseReading> getLatestGlucose() async {
     final patientId = await _getPatientId();

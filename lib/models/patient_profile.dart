@@ -1,3 +1,5 @@
+import 'package:diabetes_management_system/models/patient_alert_settings.dart'; // Import this
+
 class Patient {
   final String id;
   final String firstName;
@@ -7,6 +9,10 @@ class Patient {
   final String diagnosisDate;
   final String emergencyContactPhone;
   final String createdAt;
+  final String? physicianName;
+  final bool? isPhysicianConfirmed;
+
+  final PatientAlertSettings? alertSettings;
 
   Patient({
     required this.id,
@@ -17,6 +23,9 @@ class Patient {
     required this.diagnosisDate,
     required this.emergencyContactPhone,
     required this.createdAt,
+    this.physicianName,
+    this.isPhysicianConfirmed,
+    this.alertSettings,
   });
 
   // Factory constructor to map JSON from Spring Boot
@@ -30,6 +39,11 @@ class Patient {
       diagnosisDate: json['diagnosisDate'] ?? '',
       emergencyContactPhone: json['emergencyContactPhone'] ?? '',
       createdAt: json['createdAt'] ?? '',
+      physicianName: json['physicianName'],
+      isPhysicianConfirmed: json['isPhysicianConfirmed'],
+      alertSettings: json['alert_settings'] != null
+          ? PatientAlertSettings.fromJson(json['alert_settings'])
+          : null,
     );
   }
 }

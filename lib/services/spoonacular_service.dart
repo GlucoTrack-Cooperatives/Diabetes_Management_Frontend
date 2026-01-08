@@ -1,72 +1,80 @@
 import 'dart:convert';
+import 'package:diabetes_management_system/services/api_client.dart';
+import 'package:diabetes_management_system/services/secure_storage_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
-class SpoonacularService {
-  final String apiKey = 'e5eefa5d6b9f48ae8978be0a126ff410';
-  final String _baseUrl = 'https://api.spoonacular.com/food/images/analyze';
+// Provider for the service
+final foodAnalysisRepositoryProvider = Provider<FoodAnalysisRepository>((ref) {
+  final apiClient = ref.watch(apiClientProvider);
+  final storageService = ref.watch(storageServiceProvider);
+  return FoodAnalysisRepository(apiClient, storageService);
+});
 
-  Future<Map<String, dynamic>?> analyzeFoodImage(XFile image) async {
+class FoodAnalysisRepository {
+  final ApiClient _client;
+  final SecureStorageService _storage;
+
+  FoodAnalysisRepository(this._client, this._storage);
+
+  Future<Map<String, dynamic>?> analyzeFoodImage(String patientId,
+      XFile image) async {
     try {
-      var request = http.MultipartRequest('POST', Uri.parse(_baseUrl));
+      final uri = Uri.parse(
+          '${_client.baseUrl}/patients/$patientId/logs/analyze');
+      var request = http.MultipartRequest('POST', uri);
 
-      // 1. Authenticate
-      request.url.replace(queryParameters: {'apiKey': apiKey});
-
-      // 2. Set Headers to look like a real app, not a script
-      request.headers.addAll({
-        'Accept': '*/*',
-        'User-Agent': 'PostmanRuntime/7.32.3', // Sometimes pretending to be Postman helps bypass blocks
-        'Connection': 'keep-alive',
-      });
+      final token = await _storage.getToken();
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
 
       // 3. Add the file
       final bytes = await image.readAsBytes();
       request.files.add(
           http.MultipartFile.fromBytes(
-              'file',
+              'file', // Matches @RequestParam("file") in Spring Boot
               bytes,
               filename: image.name
           )
       );
 
-      print("Sending request to Spoonacular...");
+      // 4. Send Request
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
 
-      print("Response Status: ${response.statusCode}");
+      print("Flutter: Status Code: ${response.statusCode}");
+      print("Flutter: Response Body: ${response.body}");
 
       if (response.statusCode == 200) {
-        // SUCCESS: Parse real data
-        final data = json.decode(response.body);
-        if (data['nutrition'] != null) {
-          return {
-            'description': data['category']?['name'] ?? 'Unknown Food',
-            'calories': data['nutrition']?['calories']?['value']?.toString() ?? '0',
-            'carbs': data['nutrition']?['carbs']?['value']?.toString() ?? '0',
-          };
+        final dynamic decoded = json.decode(response.body);
+
+        // Safety check: ensure we actually got a map back
+        if (decoded is! Map<String, dynamic>) {
+          print("Flutter: Error - Expected JSON Map but got ${decoded
+              .runtimeType}");
+          return null;
         }
-      } else if (response.statusCode == 403 || response.statusCode == 401) {
-        // BLOCKED: The API is blocking us. Use Demo Data so the app still 'works'.
-        print("⚠️ API Blocked by Security (Cloudflare). Switching to Demo Mode.");
-        return _getDemoData();
+
+        final data = decoded;
+
+        // SAFE PARSING: Handles Int, String, or Null safely
+        return {
+          'description': data['description']?.toString() ?? 'Unknown Food',
+          'calories': data['calories']?.toString() ?? '0',
+          'carbs': data['carbs']?.toString() ?? '0',
+        };
       } else {
-        print('API Error: ${response.body}');
+        print('Backend Analysis Error: ${response.statusCode} - ${response
+            .body}');
+        return null;
       }
-    } catch (e) {
-      print('Exception: $e');
+    } catch (e, stack) {
+      // Print stack trace to see EXACTLY why it crashed
+      print('Exception during analysis: $e');
+      print('Stack trace: $stack');
+      return null;
     }
-
-    // If everything fails, return null
-    return null;
-  }
-
-  // Fallback data so your UI always has something to show
-  Map<String, dynamic> _getDemoData() {
-    return {
-      'description': 'Detected Food (Demo)',
-      'calories': '450',
-      'carbs': '35',
-    };
   }
 }

@@ -7,6 +7,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:diabetes_management_system/models/log_entry_dto.dart';
+import 'package:diabetes_management_system/models/medications_request.dart';
+import 'package:diabetes_management_system/repositories/log_repository.dart';
 
 
 // Services
@@ -42,17 +45,32 @@ class _MobileLogBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _LogInputSection(),
-            SizedBox(height: 24),
-            _RecentLogsList(),
-          ],
+    // FIX: Remove SingleChildScrollView.
+    // Use a Column with Expanded to split the screen vertically.
+    return Column(
+      children: [
+        // 1. Input Section (Takes 70% of screen)
+        // This allows the inner TabBarView to function correctly.
+        // The _MealLogView inside it handles its own scrolling if content is long.
+        const Expanded(
+            flex: 7,
+            child: _LogInputSection()
         ),
-      ),
+
+        // Visual Separator
+        Divider(height: 1, thickness: 1, color: Colors.grey[300]),
+
+        // 2. Recent Logs (Takes 30% of screen)
+        // We wrap this in a container or Expanded so the list has a fixed area
+        // at the bottom to scroll within.
+        const Expanded(
+            flex: 3,
+            child: Padding(
+              padding: EdgeInsets.only(top: 8.0),
+              child: _RecentLogsList(),
+            )
+        ),
+      ],
     );
   }
 }
@@ -151,7 +169,6 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
 
   // Services
   final ImagePicker _picker = ImagePicker();
-  final SpoonacularService _spoonacularService = SpoonacularService();
   final OpenFoodFactsService _openFoodService = OpenFoodFactsService();
 
   Future<void> _pickImage(ImageSource source) async {
@@ -168,44 +185,43 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
   }
 
   Future<void> _analyzeData() async {
-    // Validation
+    // 1. Validation
     if (!_isBarcodeMode && _imageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please take a photo first.")));
       return;
     }
     if (_isBarcodeMode && _barcodeInputController.text.isEmpty && _imageFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please enter a barcode or take a photo.")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please enter a barcode.")));
       return;
     }
-    Map<String, dynamic>? result;
 
+    // 2. Execution
     if (_isBarcodeMode) {
-      // --- BARCODE MODE ---
-      String codeToSearch = _barcodeInputController.text;
+      // --- BARCODE MODE (Keep Local Logic) ---
+      try {
+        String codeToSearch = _barcodeInputController.text;
+        if (codeToSearch.isEmpty) codeToSearch = "5900001001001"; // Demo fallback
 
-      // Note: If we had a real ML Kit scanner, we would extract code from _imageFile here.
-      // For now, we rely on the manual input if the image isn't processed.
-      if (codeToSearch.isEmpty) {
-        // Fallback for demo if they took a photo but didn't type (Simulated)
-        codeToSearch = "5900001001001"; // Example Polish Barcode
+        final result = await _openFoodService.getProductFromBarcode(codeToSearch);
+
+        if (result != null) {
+          setState(() {
+            _descController.text = result['description'] ?? '';
+            _carbsController.text = result['carbs']?.toString() ?? '';
+            _caloriesController.text = result['calories']?.toString() ?? '';
+          });
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Found: ${result['description']}")));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Product not found.")));
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Barcode Error: $e")));
       }
 
-      result = await _openFoodService.getProductFromBarcode(codeToSearch);
-
     } else {
-      // --- SPOONACULAR PHOTO MODE ---
-      result = await _spoonacularService.analyzeFoodImage(_imageFile!);
-    }
-
-    if (result != null) {
-      _descController.text = result['description'] ?? '';
-      _carbsController.text = result['carbs'] ?? '';
-      _caloriesController.text = result['calories'] ?? '';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Found: ${result['description']}")));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_isBarcodeMode ? "Product not found. Check code." : "Could not identify food."))
-      );
+      // --- AI CAMERA MODE (Use Riverpod Controller) ---
+      // We just call the function. The UI update happens in ref.listen below.
+      ref.read(foodLogControllerProvider.notifier).analyzeImage(_imageFile!);
     }
   }
 
@@ -222,10 +238,20 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
   Widget build(BuildContext context) {
     // 1. Listen to the Controller State
     ref.listen<FoodLogState>(foodLogControllerProvider, (previous, next) {
-      if (next is FoodLogSuccess) {
-        // Success Logic
+      // Case 1: AI Analysis Finished Successfully
+      if (next is FoodAnalysisSuccess) {
+        _descController.text = next.description;
+        _carbsController.text = next.carbs;
+        _caloriesController.text = next.calories;
 
-        // Clear forms
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("Food Identified: ${next.description}"),
+          backgroundColor: Colors.green,
+        ));
+      }
+
+      // Case 2: Log Saved to Database Successfully
+      else if (next is FoodLogSuccess) {
         _descController.clear();
         _carbsController.clear();
         _caloriesController.clear();
@@ -247,8 +273,8 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
     });
 
     // 2. Watch the state to handle Loading UI
-    // final state = ref.watch(foodLogControllerProvider);
-    // final bool isLoading = state is FoodLogLoading;
+    final state = ref.watch(foodLogControllerProvider);
+    final bool isLoading = state is FoodLogLoading || state is FoodAnalysisLoading;
 
     return SingleChildScrollView(
       child: Column(
@@ -341,9 +367,12 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
 
           // 5. ACTION BUTTON (Calls API)
           CustomElevatedButton(
-            onPressed:  _analyzeData,
+            onPressed: isLoading ? () {} : _analyzeData,
             height: 50.0,
-            child: Text(_isBarcodeMode ? "Search Barcode" : "Identify Food"),
+            // Show a spinner inside the button if loading
+            child: isLoading
+                ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : Text(_isBarcodeMode ? "Search Barcode" : "Identify Food"),
           ),
 
           SizedBox(height: 24),
@@ -403,34 +432,14 @@ class _InsulinLogView extends ConsumerStatefulWidget {
 class _InsulinLogViewState extends ConsumerState<_InsulinLogView> {
   final TextEditingController _doseController = TextEditingController();
 
-  // Map Display Name -> Backend UUID
-  // In a real app, you would fetch this Map from the backend (GET /patients/{id}/medications)
-  // For now, we hardcode popular Polish brands with Placeholder UUIDs.
-  // REPLACE THESE UUID STRINGS with actual IDs from your 'medication' table in Postgres.
-  final Map<String, String> _insulinOptions = {
-    'Novorapid (Aspart)': '11111111-1111-1111-1111-111111111111',
-    'Humalog (Lispro)':   '22222222-2222-2222-2222-222222222222',
-    'Fiasp (Fast Aspart)':'33333333-3333-3333-3333-333333333333',
-    'Lantus (Glargine)':  '44444444-4444-4444-4444-444444444444',
-    'Abasaglar (Glargine)':'55555555-5555-5555-5555-555555555555',
-    'Toujeo':             '66666666-6666-6666-6666-666666666666',
-    'Tresiba (Degludec)': '77777777-7777-7777-7777-777777777777',
-    'Mixtard 30':         '88888888-8888-8888-8888-888888888888',
-  };
-
   String? _selectedName;
   String? _selectedId;
 
-  @override
-  void initState() {
-    super.initState();
-    // Default to the first one
-    _selectedName = _insulinOptions.keys.first;
-    _selectedId = _insulinOptions.values.first;
-  }
-
   void _submitDose() {
-    if (_selectedId == null) return;
+    if (_selectedId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please select a medication")));
+      return;
+    }
 
     // Call the controller
     ref.read(foodLogControllerProvider.notifier).submitInsulin(
@@ -462,30 +471,38 @@ class _InsulinLogViewState extends ConsumerState<_InsulinLogView> {
     final state = ref.watch(foodLogControllerProvider);
     final bool isLoading = state is FoodLogLoading;
 
+    final medicationsAsync = ref.watch(medicationsProvider);
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. BRAND DROPDOWN
-          DropdownButtonFormField<String>(
-            value: _selectedName,
-            isExpanded: true,
-            items: _insulinOptions.keys.map((String key) {
-              return DropdownMenuItem<String>(
-                value: key,
-                child: Text(key, overflow: TextOverflow.ellipsis),
+          // 1. BRAND DROPDOWN (Async)
+          medicationsAsync.when(
+            loading: () => Center(child: CircularProgressIndicator()),
+            error: (err, stack) => Text('Error loading medications: $err', style: TextStyle(color: Colors.red)),
+            data: (medications) {
+              return DropdownButtonFormField<String>(
+                value: _selectedId,
+                isExpanded: true,
+                items: medications.map((med) {
+                  return DropdownMenuItem<String>(
+                    value: med.id,
+                    child: Text(med.name, overflow: TextOverflow.ellipsis),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  setState(() {
+                    _selectedId = val;
+                    _selectedName = medications.firstWhere((m) => m.id == val).name;
+                  });
+                },
+                decoration: InputDecoration(
+                    labelText: 'Insulin Type',
+                    border: OutlineInputBorder()
+                ),
               );
-            }).toList(),
-            onChanged: (val) {
-              setState(() {
-                _selectedName = val;
-                _selectedId = _insulinOptions[val];
-              });
             },
-            decoration: InputDecoration(
-                labelText: 'Insulin Type (Poland)',
-                border: OutlineInputBorder()
-            ),
           ),
 
           SizedBox(height: 16),

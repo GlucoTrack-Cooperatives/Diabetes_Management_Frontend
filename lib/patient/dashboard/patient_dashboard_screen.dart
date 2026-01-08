@@ -1,3 +1,5 @@
+import 'package:diabetes_management_system/models/dashboard_models.dart';
+import 'package:diabetes_management_system/models/patient_profile.dart';
 import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_controller.dart';
 import 'package:diabetes_management_system/theme/app_colors.dart';
 import 'package:diabetes_management_system/theme/app_text_styles.dart';
@@ -7,9 +9,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:csv/csv.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../models/dashboard_models.dart';
-import '../../models/patient_profile.dart';
+import 'package:intl/intl.dart';
 
 class PatientDashboardScreen extends ConsumerWidget {
   const PatientDashboardScreen({super.key});
@@ -65,7 +65,7 @@ class _DashboardMobileBody extends StatelessWidget {
             SizedBox(height: 24),
             _buildNutritionSection(data.recentMeals),
             SizedBox(height: 24),
-            _GlucoseMonitoringSection(),
+            _GlucoseMonitoringSection(readings: data.history),
           ],
         ),
       ),
@@ -92,7 +92,7 @@ class _DashboardDesktopBody extends StatelessWidget {
               children: [
                 Expanded(
                   flex: 2,
-                  child: _GlucoseMonitoringSection(),
+                  child: _GlucoseMonitoringSection(readings: data.history),
                 ),
                 SizedBox(width: 24),
                 Expanded(
@@ -253,160 +253,412 @@ Widget _buildStatRow(String label, String value) {
 
 
 class _GlucoseMonitoringSection extends StatefulWidget {
+  final List<GlucoseReading> readings;
+
+  const _GlucoseMonitoringSection({required this.readings});
+
   @override
   __GlucoseMonitoringSectionState createState() => __GlucoseMonitoringSectionState();
 }
 
 class __GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
-  List<FlSpot> _allData = [];
-  List<FlSpot> _visibleData = [];
   String _selectedRange = '24H';
 
-  @override
-  void initState() {
-    super.initState();
-    _loadGlucoseData();
-  }
+  // Constants for Time calculations (in milliseconds)
+  static const int _hourInMs = 3600000;
+  static const int _minuteInMs = 60000;
 
-  Future<void> _loadGlucoseData() async {
-    final rawData = await rootBundle.loadString('assets/data/Dexcom_data.csv');
-    List<List<dynamic>> csvTable = CsvToListConverter().convert(rawData);
+  // 1. Filter AND Downsample Data based on selected range
+  List<FlSpot> _getVisibleSpots(double minX, double maxX) {
+    if (widget.readings.isEmpty) return [];
 
-    List<FlSpot> spots = [];
-    final targetDay = DateTime(2025, 11, 22);
+    // Step A: Basic Range Filtering
+    final rawFiltered = widget.readings.where((r) {
+      final t = r.timestamp.millisecondsSinceEpoch.toDouble();
+      return t >= minX && t <= maxX;
+    }).toList();
 
-    for (var i = 1; i < csvTable.length; i++) {
-      final row = csvTable[i];
-      try {
-        final timestamp = DateTime.parse(row[1]);
-        if (timestamp.year == targetDay.year && timestamp.month == targetDay.month && timestamp.day == targetDay.day) {
-          final hour = timestamp.hour + (timestamp.minute / 60.0);
-          final glucoseMgDl = double.parse(row[7].toString());
-          final glucoseMmolL = glucoseMgDl / 18.0;
-          spots.add(FlSpot(hour, glucoseMmolL));
+    // Sort oldest to newest
+    rawFiltered.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    if (rawFiltered.isEmpty) return [];
+
+    // Step B: Downsampling Logic
+    List<GlucoseReading> displayReadings = [];
+
+    // Define the "Resolution" based on the selected range
+    // 4H  -> Show everything (5 min resolution)
+    // 8H  -> Show every 15 mins
+    // 24H -> Show every 30 mins
+    int skipMinutes;
+    if (_selectedRange == '24H') {
+      skipMinutes = 10;
+    } else if (_selectedRange == '8H') {
+      skipMinutes = 5;
+    } else {
+      skipMinutes = 0;
+    }
+
+    if (skipMinutes > 0) {
+      DateTime? lastAddedTime;
+
+      for (var reading in rawFiltered) {
+        if (lastAddedTime == null) {
+          displayReadings.add(reading);
+          lastAddedTime = reading.timestamp;
+        } else {
+          final difference = reading.timestamp.difference(lastAddedTime).inMinutes;
+          // Only add if enough time has passed since the last point
+          if (difference >= skipMinutes) {
+            displayReadings.add(reading);
+            lastAddedTime = reading.timestamp;
+          }
         }
-      } catch (e) {
-        // print('Error parsing row: $row. Error: $e');
       }
+    } else {
+      displayReadings = rawFiltered;
     }
 
-    spots.sort((a, b) => a.x.compareTo(b.x));
-
-    setState(() {
-      _allData = spots;
-      _updateVisibleData();
-    });
+    // Step C: Convert to Spots (Value / 18.0 for mmol/L)
+    return displayReadings.map((r) {
+      return FlSpot(
+        r.timestamp.millisecondsSinceEpoch.toDouble(),
+        r.value / 18.0,
+      );
+    }).toList();
   }
 
-  void _updateVisibleData() {
-    if (_allData.isEmpty) {
-      _visibleData = [];
-      return;
-    }
+  // 2. Calculate Axis Boundaries (Snapping to round numbers)
+  (double minX, double maxX, double interval) _getAxisDetails() {
+    final now = DateTime.now();
 
-    final now = _allData.map((spot) => spot.x).reduce((a, b) => a > b ? a : b);
-    double minHour = 0;
+    // We snap the 'Max' time to the next logical block so the graph looks "finished"
+    // e.g., if it's 10:15, 4H graph extends to 10:30 or 11:00.
+    DateTime snappedMax;
+    Duration rangeDuration;
+    double intervalMs;
 
     switch (_selectedRange) {
       case '4H':
-        minHour = now - 4;
+      // Snap to next 30 minutes
+        final remainder = 30 - (now.minute % 30);
+        snappedMax = now.add(Duration(minutes: remainder)).subtract(Duration(seconds: now.second, milliseconds: now.millisecond));
+        rangeDuration = const Duration(hours: 4);
+        intervalMs = 30 * _minuteInMs.toDouble(); // 30 Minute interval
         break;
       case '8H':
-        minHour = now - 8;
+      // Snap to next hour
+        final remainder = 60 - now.minute;
+        snappedMax = now.add(Duration(minutes: remainder)).subtract(Duration(seconds: now.second, milliseconds: now.millisecond));
+        rangeDuration = const Duration(hours: 8);
+        intervalMs = _hourInMs.toDouble(); // 1 Hour interval
         break;
       case '24H':
       default:
-        minHour = 0;
+      // Snap to next hour
+        final remainder = 60 - now.minute;
+        snappedMax = now.add(Duration(minutes: remainder)).subtract(Duration(seconds: now.second, milliseconds: now.millisecond));
+        rangeDuration = const Duration(hours: 24);
+        intervalMs = 4 * _hourInMs.toDouble(); // 4 Hour interval (to fit screen)
         break;
     }
 
-    setState(() {
-      _visibleData = _allData.where((spot) => spot.x >= minHour).toList();
-    });
+    final maxX = snappedMax.millisecondsSinceEpoch.toDouble();
+    final minX = snappedMax.subtract(rangeDuration).millisecondsSinceEpoch.toDouble();
+
+    return (minX, maxX, intervalMs);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Get calculated boundaries
+    final (minX, maxX, interval) = _getAxisDetails();
+    final spots = _getVisibleSpots(minX, maxX);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Glucose Monitoring', style: AppTextStyles.headline2),
-        SizedBox(height: 12),
-        Material(
-          color: Colors.transparent,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: ['4H', '8H', '24H'].map((label) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: ChoiceChip(
-                    label: Text(label),
-                    selected: _selectedRange == label,
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() {
-                          _selectedRange = label;
-                          _updateVisibleData();
-                        });
+        const SizedBox(height: 12),
+        // Time Range Selector
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: ['4H', '8H', '24H'].map((label) {
+            return Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: ChoiceChip(
+                label: Text(label),
+                selected: _selectedRange == label,
+                onSelected: (selected) {
+                  if (selected) setState(() => _selectedRange = label);
+                },
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 16),
+
+        // The Chart
+        SizedBox(
+          height: 250,
+          child: LineChart(
+            LineChartData(
+              // 3. Tooltip Formatting (1 decimal place)
+              lineTouchData: LineTouchData(
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+                    return touchedBarSpots.map((barSpot) {
+                      return LineTooltipItem(
+                        barSpot.y.toStringAsFixed(1), // Logic: 1 decimal place
+                        const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold
+                        ),
+                      );
+                    }).toList();
+                  },
+                ),
+                handleBuiltInTouches: true,
+              ),
+
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: true,
+                verticalInterval: interval, // Grid lines align with round hours
+                horizontalInterval: 2,
+                getDrawingVerticalLine: (value) {
+                  return FlLine(color: Colors.grey.withOpacity(0.2), strokeWidth: 1);
+                },
+                getDrawingHorizontalLine: (value) {
+                  return FlLine(color: Colors.grey.withOpacity(0.2), strokeWidth: 1);
+                },
+              ),
+
+              titlesData: FlTitlesData(
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+
+                // Left Y-Axis Titles
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    interval: 2, // Every 2 mmol/L
+                    reservedSize: 32,
+                    getTitlesWidget: (value, meta) {
+                      // Only show integer values for cleaner axis
+                      if (value % 2 == 0) {
+                        return Text(value.toInt().toString(), style: AppTextStyles.bodyText2);
                       }
+                      return const SizedBox.shrink();
                     },
                   ),
-                );
-              }).toList(),
-            ),
-          ),
-        ),
-        SizedBox(height: 16),
-        SizedBox(
-          height: 200,
-          child: _allData.isEmpty
-              ? Center(child: CircularProgressIndicator())
-              : LineChart(
-                  LineChartData(
-                    gridData: FlGridData(show: false),
-                    titlesData: FlTitlesData(
-                      leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 40,
-                          getTitlesWidget: (value, meta) {
-                            // Show fewer labels on the Y-axis
-                            if (value % 5 == 0) {
-                              return Text('${value.toInt()}', style: AppTextStyles.bodyText2, textAlign: TextAlign.left);
-                            }
-                            return Text('');
-                          },
+                ),
+
+                // Bottom X-Axis Titles (Time)
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 30,
+                    interval: interval, // Use the calculated interval (30m, 1h, or 4h)
+                    getTitlesWidget: (value, meta) {
+                      // Avoid showing label if it falls outside our snapped range
+                      if (value < minX || value > maxX) return const SizedBox.shrink();
+
+                      final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          DateFormat('HH:mm').format(date),
+                          style: AppTextStyles.bodyText2.copyWith(fontSize: 10),
                         ),
-                      ),
-                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 22,
-                          interval: 4, // Show a label every 4 hours
-                          getTitlesWidget: (value, meta) => Text('${value.toInt()}:00', style: AppTextStyles.bodyText2),
-                        ),
-                      ),
-                    ),
-                    borderData: FlBorderData(show: true, border: Border.all(color: AppColors.primary.withOpacity(0.2))),
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: _visibleData,
-                        isCurved: true,
-                        color: AppColors.primary,
-                        barWidth: 3,
-                        isStrokeCapRound: true,
-                        dotData: FlDotData(show: false),
-                        belowBarData: BarAreaData(show: true, color: AppColors.primary.withOpacity(0.1)),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
+              ),
+
+              borderData: FlBorderData(show: false),
+
+              // 4. Set Fixed Boundaries
+              minX: minX,
+              maxX: maxX,
+              minY: 0,
+              maxY: 20, // Approx 360 mg/dL - reasonable cap for mmol/L
+
+              lineBarsData: [
+                LineChartBarData(
+                  spots: spots,
+                  isCurved: true,
+                  curveSmoothness: 0.2,
+                  color: AppColors.primary,
+                  barWidth: 3,
+                  isStrokeCapRound: true,
+                  dotData: const FlDotData(show: false),
+                  belowBarData: BarAreaData(
+                      show: true,
+                      color: AppColors.primary.withOpacity(0.15)
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );
   }
 }
+
+
+// class __GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
+//   List<FlSpot> _allData = [];
+//   List<FlSpot> _visibleData = [];
+//   String _selectedRange = '24H';
+//
+//   @override
+//   void initState() {
+//     super.initState();
+//     _loadGlucoseData();
+//   }
+//
+//   Future<void> _loadGlucoseData() async {
+//     final rawData = await rootBundle.loadString('assets/data/Dexcom_data.csv');
+//     List<List<dynamic>> csvTable = CsvToListConverter().convert(rawData);
+//
+//     List<FlSpot> spots = [];
+//     final targetDay = DateTime(2025, 11, 22);
+//
+//     for (var i = 1; i < csvTable.length; i++) {
+//       final row = csvTable[i];
+//       try {
+//         final timestamp = DateTime.parse(row[1]);
+//         if (timestamp.year == targetDay.year && timestamp.month == targetDay.month && timestamp.day == targetDay.day) {
+//           final hour = timestamp.hour + (timestamp.minute / 60.0);
+//           final glucoseMgDl = double.parse(row[7].toString());
+//           final glucoseMmolL = glucoseMgDl / 18.0;
+//           spots.add(FlSpot(hour, glucoseMmolL));
+//         }
+//       } catch (e) {
+//         // print('Error parsing row: $row. Error: $e');
+//       }
+//     }
+//
+//     spots.sort((a, b) => a.x.compareTo(b.x));
+//
+//     setState(() {
+//       _allData = spots;
+//       _updateVisibleData();
+//     });
+//   }
+//
+//   void _updateVisibleData() {
+//     if (_allData.isEmpty) {
+//       _visibleData = [];
+//       return;
+//     }
+//
+//     final now = _allData.map((spot) => spot.x).reduce((a, b) => a > b ? a : b);
+//     double minHour = 0;
+//
+//     switch (_selectedRange) {
+//       case '4H':
+//         minHour = now - 4;
+//         break;
+//       case '8H':
+//         minHour = now - 8;
+//         break;
+//       case '24H':
+//       default:
+//         minHour = 0;
+//         break;
+//     }
+//
+//     setState(() {
+//       _visibleData = _allData.where((spot) => spot.x >= minHour).toList();
+//     });
+//   }
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         Text('Glucose Monitoring', style: AppTextStyles.headline2),
+//         SizedBox(height: 12),
+//         Material(
+//           color: Colors.transparent,
+//           child: SingleChildScrollView(
+//             scrollDirection: Axis.horizontal,
+//             child: Row(
+//               mainAxisAlignment: MainAxisAlignment.start,
+//               children: ['4H', '8H', '24H'].map((label) {
+//                 return Padding(
+//                   padding: const EdgeInsets.only(right: 8.0),
+//                   child: ChoiceChip(
+//                     label: Text(label),
+//                     selected: _selectedRange == label,
+//                     onSelected: (selected) {
+//                       if (selected) {
+//                         setState(() {
+//                           _selectedRange = label;
+//                           _updateVisibleData();
+//                         });
+//                       }
+//                     },
+//                   ),
+//                 );
+//               }).toList(),
+//             ),
+//           ),
+//         ),
+//         SizedBox(height: 16),
+//         SizedBox(
+//           height: 200,
+//           child: _allData.isEmpty
+//               ? Center(child: CircularProgressIndicator())
+//               : LineChart(
+//                   LineChartData(
+//                     gridData: FlGridData(show: false),
+//                     titlesData: FlTitlesData(
+//                       leftTitles: AxisTitles(
+//                         sideTitles: SideTitles(
+//                           showTitles: true,
+//                           reservedSize: 40,
+//                           getTitlesWidget: (value, meta) {
+//                             // Show fewer labels on the Y-axis
+//                             if (value % 5 == 0) {
+//                               return Text('${value.toInt()}', style: AppTextStyles.bodyText2, textAlign: TextAlign.left);
+//                             }
+//                             return Text('');
+//                           },
+//                         ),
+//                       ),
+//                       rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+//                       topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+//                       bottomTitles: AxisTitles(
+//                         sideTitles: SideTitles(
+//                           showTitles: true,
+//                           reservedSize: 22,
+//                           interval: 4, // Show a label every 4 hours
+//                           getTitlesWidget: (value, meta) => Text('${value.toInt()}:00', style: AppTextStyles.bodyText2),
+//                         ),
+//                       ),
+//                     ),
+//                     borderData: FlBorderData(show: true, border: Border.all(color: AppColors.primary.withOpacity(0.2))),
+//                     lineBarsData: [
+//                       LineChartBarData(
+//                         spots: _visibleData,
+//                         isCurved: true,
+//                         color: AppColors.primary,
+//                         barWidth: 3,
+//                         isStrokeCapRound: true,
+//                         dotData: FlDotData(show: false),
+//                         belowBarData: BarAreaData(show: true, color: AppColors.primary.withOpacity(0.1)),
+//                       ),
+//                     ],
+//                   ),
+//                 ),
+//         ),
+//       ],
+//     );
+//   }
+// }
