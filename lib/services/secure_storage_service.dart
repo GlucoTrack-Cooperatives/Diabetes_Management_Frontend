@@ -23,6 +23,11 @@ class SecureStorageService {
   Future<String?> getRole() async => await _storage.read(key: _roleKey);
   Future<String?> getUserId() async => await _storage.read(key: _userIdKey);
 
+  // Generic read/write methods for other data
+  Future<String?> read(String key) async => await _storage.read(key: key);
+  Future<void> write(String key, String value) async => await _storage.write(key: key, value: value);
+  Future<void> delete(String key) async => await _storage.delete(key: key);
+
   // Delete Token (Logout)
   Future<void> clearAll() async {
     await _storage.deleteAll();
