@@ -200,7 +200,11 @@ class _PatientList extends ConsumerWidget { // Change to ConsumerWidget
                     // Only allow navigation if confirmed, or show warning
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const PatientAnalysisScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => PatientAnalysisScreen(
+                            patientId: patient.id,
+                            patientName: patient.fullName,
+                          )),
                     );
                   },
                 ),

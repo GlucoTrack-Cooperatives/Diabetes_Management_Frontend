@@ -292,11 +292,11 @@ class __GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
     // 24H -> Show every 30 mins
     int skipMinutes;
     if (_selectedRange == '24H') {
-      skipMinutes = 30;
+      skipMinutes = 10;
     } else if (_selectedRange == '8H') {
-      skipMinutes = 15;
+      skipMinutes = 5;
     } else {
-      skipMinutes = 5; // Show all
+      skipMinutes = 0;
     }
 
     if (skipMinutes > 0) {
