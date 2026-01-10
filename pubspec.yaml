@@ -36,7 +36,7 @@ dependencies:
   google_mlkit_barcode_scanning: ^0.14.1
   flutter_secure_storage: ^10.0.0
   intl: ^0.20.2
-  health: ^13.2.1
+  health: ^13.0.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
