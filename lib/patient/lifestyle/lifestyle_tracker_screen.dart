@@ -136,24 +136,112 @@ class _SleepCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
+    final totalHours = duration.inMinutes / 60;
+
+    // Determine sleep quality based on duration
+    final sleepQuality = _getSleepQuality(totalHours);
+    final sleepColor = _getSleepColor(totalHours);
+
     return Card(
-      child: SizedBox(
-        height: _cardHeight,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Sleep', style: AppTextStyles.headline2),
-              const Spacer(),
-              Text('Last Night: ${hours}h ${minutes}m', style: AppTextStyles.bodyText1),
-              const SizedBox(height: 8),
-              Container(height: 30, color: Colors.grey.shade200, child: Center(child: Text('Graph', style: AppTextStyles.bodyText2))),
-            ],
-          ),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        height: 160,
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.nightlight_round, color: sleepColor, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  'Sleep',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+
+            // Main sleep duration display
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '${hours}h ${minutes}m',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: sleepColor,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  sleepQuality,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Sleep progress bar
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Last Night',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    Text(
+                      'Goal: 7-9h',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: (totalHours / 9).clamp(0.0, 1.0),
+                    minHeight: 8,
+                    backgroundColor: Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(sleepColor),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  String _getSleepQuality(double hours) {
+    if (hours == 0) return 'No data';
+    if (hours < 5) return 'Poor';
+    if (hours < 7) return 'Fair';
+    if (hours <= 9) return 'Good';
+    return 'Excessive';
+  }
+
+  Color _getSleepColor(double hours) {
+    if (hours == 0) return Colors.grey;
+    if (hours < 5) return Colors.red;
+    if (hours < 7) return Colors.orange;
+    if (hours <= 9) return Colors.green;
+    return Colors.blue;
   }
 }
 
@@ -190,8 +278,8 @@ class _ActivityCard extends StatelessWidget {
                         alignment: Alignment.center,
                         children: [
                           SizedBox(
-                            width: 70,
-                            height: 70,
+                            width: 60,
+                            height: 60,
                             child: CircularProgressIndicator(
                               value: progress,
                               strokeWidth: 8,

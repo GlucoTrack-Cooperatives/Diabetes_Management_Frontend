@@ -30,8 +30,11 @@
     <uses-permission android:name="android.permission.health.READ_HYDRATION"/>
     <uses-permission android:name="android.permission.health.WRITE_HYDRATION"/>
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY"/>
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.WRITE_TOTAL_CALORIES_BURNED"/>
     <!-- For older Android versions (pre-14) using Google Fit -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
+
 
     <application
         android:label="diabetes_management_system"

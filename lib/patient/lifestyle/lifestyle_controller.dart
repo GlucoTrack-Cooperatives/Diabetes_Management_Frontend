@@ -55,73 +55,70 @@ class LifestyleController extends StateNotifier<LifestyleData> {
     try {
       // 1. Check & Request Permissions
       final hasPermissions = await _healthService.hasPermissions();
-      print(" Has permissions: $hasPermissions");
+      print("📱 Has permissions: $hasPermissions");
       if (!hasPermissions) {
+        print("📱 Requesting permissions...");
         final granted = await _healthService.requestPermissions();
-        print(" Permissions granted: $granted");
+        print("📱 Permissions granted: $granted");
         if (!granted) {
-          // If denied, we stop loading but keep empty data
+          print("📱 ❌ Permissions denied by user");
           state = state.copyWith(isLoading: false);
           return;
         }
       }
 
-      // 2. Define Time Ranges
+      // 2. Define Time Ranges (using local time)
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
-      final endOfNow = now;
-      final yesterday = now.subtract(const Duration(hours: 24));
 
-      print("⏰ Local time now: $now");
+      // For sleep: check from 6 PM yesterday to now (captures last night's sleep)
+      final sleepStart = startOfDay.subtract(const Duration(hours: 3));
+
+      // For calories: get last 2 days to be safe
+      final caloriesStart = now.subtract(const Duration(days: 2));
+
+      print("⏰ Current local time: $now");
+      print("⏰ Timezone: ${now.timeZoneName} (UTC${now.timeZoneOffset.inHours >= 0 ? '+' : ''}${now.timeZoneOffset.inHours})");
       print("⏰ Start of day: $startOfDay");
-      print("⏰ Time range for daily data: $startOfDay to $endOfNow");
-      print("⏰ Time range for sleep: $yesterday to $endOfNow");
+      print("⏰ Sleep query range: $sleepStart to $now");
+      print("⏰ Calories query range: $caloriesStart to $now");
 
       // 3. Fetch Data
       // Steps
       print("👟 Fetching steps...");
       final steps = await _healthService.getTotalStepsForDay(now);
-      print("👟 Steps: ${steps ?? 0}");
+      print("👟 Steps result: ${steps ?? 0}");
 
-
-      print("🔥 Fetching total calories...");
-      final caloriePoints = await _healthService.getTotalEnergyData(yesterday, now);
+      // Calories - try fetching more days
+      print("🔥 Fetching calories...");
+      final caloriePoints = await _healthService.getTotalEnergyData(caloriesStart, now);
       print("🔥 Received ${caloriePoints.length} calorie data points");
 
-      // Filter to only today's data after fetching
+      // Filter to only today's data
       final todayCalories = caloriePoints.where((point) {
-        final pointDate = point.timestamp;
+        final pointDate = point.timestamp.toLocal();
         final isSameDay = pointDate.year == now.year &&
             pointDate.month == now.month &&
             pointDate.day == now.day;
         if (isSameDay) {
-          print("  ✅ Including: ${point.value} ${point.unit} at ${point.timestamp}");
-        } else {
-          print("  ❌ Excluding (wrong day): ${point.value} ${point.unit} at ${point.timestamp}");
+          print("  ✅ Including calorie: ${point.value} ${point.unit} at ${point.timestamp.toLocal()} from ${point.source}");
         }
         return isSameDay;
       }).toList();
 
-      final totalCalories = todayCalories.fold(0.0, (sum, point) {
-        return sum + point.value;
-      });
+      final totalCalories = todayCalories.fold(0.0, (sum, point) => sum + point.value);
       print("🔥 Total calories for today: $totalCalories");
 
-
-      // Sleep (Sum duration from last 24h)
+      // Sleep - query wider range
       print("😴 Fetching sleep data...");
-      final sleepPoints = await _healthService.getSleepData(yesterday, now);
-      print("😴 Received ${sleepPoints.length} sleep data points");
-
-      final totalSleepMinutes = sleepPoints.fold(
-          0.0, (sum, point) => sum + point.value);
-      print("😴 Total sleep minutes: $totalSleepMinutes");
+      final totalSleepMinutes = await _healthService.getTotalSleepMinutes(sleepStart, now);
+      print("😴 Total sleep: $totalSleepMinutes minutes (${(totalSleepMinutes / 60).toStringAsFixed(1)} hours)");
 
       // Weight (Latest entry in last 30 days)
       print("⚖️ Fetching weight data...");
       final weightPoints = await _healthService.getWeightData(
-          yesterday.subtract(const Duration(days: 30)),
-          now
+        now.subtract(const Duration(days: 30)),
+        now,
       );
       print("⚖️ Received ${weightPoints.length} weight data points");
 
@@ -129,7 +126,9 @@ class LifestyleController extends StateNotifier<LifestyleData> {
       if (weightPoints.isNotEmpty) {
         weightPoints.sort((a, b) => b.timestamp.compareTo(a.timestamp));
         latestWeight = weightPoints.first.value;
-        print("⚖️ Latest weight: $latestWeight kg");
+        print("⚖️ Latest weight: $latestWeight kg at ${weightPoints.first.timestamp.toLocal()}");
+      } else {
+        print("⚖️ No weight data found");
       }
 
       // 4. Update State
@@ -143,12 +142,12 @@ class LifestyleController extends StateNotifier<LifestyleData> {
 
       print("✅ Health data sync complete!");
       print("   Steps: ${steps ?? 0}");
-      print("   Calories: $totalCalories");
-      print("   Sleep: ${totalSleepMinutes.toInt()} min");
+      print("   Calories: $totalCalories kcal");
+      print("   Sleep: ${totalSleepMinutes.toInt()} min (${(totalSleepMinutes / 60).toStringAsFixed(1)} hours)");
       print("   Weight: ${latestWeight ?? 'N/A'} kg");
-    } catch (e) {
+    } catch (e, stackTrace) {
       print("❌ Error syncing health data: $e");
-      print("Stack trace: ${StackTrace.current}");
+      print("Stack trace: $stackTrace");
       state = state.copyWith(isLoading: false);
     }
   }
