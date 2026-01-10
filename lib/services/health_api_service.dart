@@ -24,6 +24,7 @@ class HealthApiService {
     HealthDataType.WORKOUT,
     HealthDataType.SLEEP_ASLEEP,
     HealthDataType.WATER,
+    HealthDataType.TOTAL_CALORIES_BURNED
   ];
 
   /// Request permissions for all health data types
@@ -62,10 +63,8 @@ class HealthApiService {
   }
 
   /// Fetch blood glucose data for a given time range
-  Future<List<model.HealthDataPoint>> getBloodGlucoseData(
-    DateTime startTime,
-    DateTime endTime,
-  ) async {
+  Future<List<model.HealthDataPoint>> getBloodGlucoseData(DateTime startTime,
+      DateTime endTime,) async {
     try {
       final healthData = await _health.getHealthDataFromTypes(
         types: [HealthDataType.BLOOD_GLUCOSE],
@@ -81,10 +80,8 @@ class HealthApiService {
   }
 
   /// Fetch step count data for a given time range
-  Future<List<model.HealthDataPoint>> getStepsData(
-    DateTime startTime,
-    DateTime endTime,
-  ) async {
+  Future<List<model.HealthDataPoint>> getStepsData(DateTime startTime,
+      DateTime endTime,) async {
     try {
       final healthData = await _health.getHealthDataFromTypes(
         types: [HealthDataType.STEPS],
@@ -100,10 +97,8 @@ class HealthApiService {
   }
 
   /// Fetch heart rate data for a given time range
-  Future<List<model.HealthDataPoint>> getHeartRateData(
-    DateTime startTime,
-    DateTime endTime,
-  ) async {
+  Future<List<model.HealthDataPoint>> getHeartRateData(DateTime startTime,
+      DateTime endTime,) async {
     try {
       final healthData = await _health.getHealthDataFromTypes(
         types: [HealthDataType.HEART_RATE],
@@ -119,10 +114,8 @@ class HealthApiService {
   }
 
   /// Fetch weight data for a given time range
-  Future<List<model.HealthDataPoint>> getWeightData(
-    DateTime startTime,
-    DateTime endTime,
-  ) async {
+  Future<List<model.HealthDataPoint>> getWeightData(DateTime startTime,
+      DateTime endTime,) async {
     try {
       final healthData = await _health.getHealthDataFromTypes(
         types: [HealthDataType.WEIGHT],
@@ -138,10 +131,8 @@ class HealthApiService {
   }
 
   /// Fetch all available health data for a given time range
-  Future<List<model.HealthDataPoint>> getAllHealthData(
-    DateTime startTime,
-    DateTime endTime,
-  ) async {
+  Future<List<model.HealthDataPoint>> getAllHealthData(DateTime startTime,
+      DateTime endTime,) async {
     try {
       final healthData = await _health.getHealthDataFromTypes(
         types: _healthTypes,
@@ -189,7 +180,8 @@ class HealthApiService {
   }
 
   /// Write steps data to health store
-  Future<bool> writeSteps(int steps, DateTime startTime, DateTime endTime) async {
+  Future<bool> writeSteps(int steps, DateTime startTime,
+      DateTime endTime) async {
     try {
       return await _health.writeHealthData(
         value: steps.toDouble(),
@@ -220,9 +212,8 @@ class HealthApiService {
 
   /// Convert Health package data points to our model
   List<model.HealthDataPoint> _convertHealthDataPoints(
-    List<HealthDataPoint> healthData,
-    String? filterType,
-  ) {
+      List<HealthDataPoint> healthData,
+      String? filterType,) {
     return healthData
         .where((point) => filterType == null || point.type.name == filterType)
         .map((point) {
@@ -259,26 +250,62 @@ class HealthApiService {
   /// Get available data types on the current platform
   Future<List<HealthDataType>> getAvailableDataTypes() async {
     final available = <HealthDataType>[];
-    
+
     for (final type in _healthTypes) {
       try {
         // Try to fetch a small amount of data to test availability
         final now = DateTime.now();
         final yesterday = now.subtract(const Duration(days: 1));
-        
+
         await _health.getHealthDataFromTypes(
           types: [type],
           startTime: yesterday,
           endTime: now,
         );
-        
+
         available.add(type);
       } catch (e) {
         // Type not available on this platform
         continue;
       }
     }
-    
+
     return available;
+  }
+
+  /// Fetch sleep data (duration in minutes) for a given time range
+  Future<List<model.HealthDataPoint>> getSleepData(DateTime startTime,
+      DateTime endTime,) async {
+    try {
+      // Note: SLEEP_ASLEEP is usually intervals. We might need to sum them up in the UI or here.
+      final healthData = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.SLEEP_ASLEEP],
+        startTime: startTime,
+        endTime: endTime,
+      );
+
+      return _convertHealthDataPoints(healthData, 'SLEEP_ASLEEP');
+    } catch (e) {
+      print('Error fetching sleep data: $e');
+      return [];
+    }
+  }
+
+  /// Fetch active energy burned (Calories)
+  Future<List<model.HealthDataPoint>> getTotalEnergyData(DateTime startTime,
+      DateTime endTime,) async {
+    try {
+      final healthData = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.TOTAL_CALORIES_BURNED],
+        startTime: startTime,
+        endTime: endTime,
+      );
+      print('Fetched ${healthData.length} calorie data points');
+
+      return _convertHealthDataPoints(healthData, null);
+    } catch (e) {
+      print('Error fetching active energy data: $e');
+      return [];
+    }
   }
 }
