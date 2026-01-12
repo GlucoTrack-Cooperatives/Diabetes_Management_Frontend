@@ -19,9 +19,10 @@ class ApiClient {
   // Define your base URL here centrally
   String get baseUrl {
     if (kIsWeb) return "http://127.0.0.1:8080/api/diabetes-management/api";
-    // if (Platform.isAndroid) return "http://10.0.2.2:8080/api/diabetes-management/api";
-    if (Platform.isAndroid) return "http://127.0.0.1:8080/api/diabetes-management/api"; //TODO: CHANGE THIS, THIS WORK FOR PHYSICAL DEVICE BASE ON YOUR IPV4 ADDRESS COMPUTER
-    return "http://127.0.0.1:8080/api/diabetes-management/api/diabetes-management/api";
+    // Android emulator uses 10.0.2.2 to reach host machine
+    if (Platform.isAndroid) return "http://10.0.2.2:8080/api/diabetes-management/api";
+    // iOS simulator can use localhost
+    return "http://127.0.0.1:8080/api/diabetes-management/api";
   }
 
   ApiClient(this._storage);
@@ -64,11 +65,13 @@ class ApiClient {
   }
 
   // Generic DELETE
-  Future<dynamic> delete(String endpoint) async {
+  Future<dynamic> delete(String endpoint, [dynamic data]) async {
     final uri = Uri.parse('$baseUrl$endpoint');
     final headers = await _getHeaders();
 
-    final response = await http.delete(uri, headers: headers);
+    final response = data != null
+        ? await http.delete(uri, headers: headers, body: jsonEncode(data))
+        : await http.delete(uri, headers: headers);
     return _handleResponse(response);
   }
 
