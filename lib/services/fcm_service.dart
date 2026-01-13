@@ -205,12 +205,16 @@ class FcmService {
       playSound: true,
       enableVibration: true,
       ticker: 'Glucose Alert',
+      fullScreenIntent: true,
+      category: AndroidNotificationCategory.alarm,
+      audioAttributesUsage: AudioAttributesUsage.alarm,
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      interruptionLevel: InterruptionLevel.critical,
     );
 
     const NotificationDetails details = NotificationDetails(

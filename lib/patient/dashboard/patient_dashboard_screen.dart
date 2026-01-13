@@ -11,6 +11,25 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+// Helper function to extract user-friendly error messages
+String _getErrorMessage(String error) {
+  // Remove HTML tags and extract meaningful error message
+  if (error.contains('404')) {
+    return 'The requested data could not be found. Please check your connection and try again.';
+  } else if (error.contains('401') || error.contains('Unauthorized')) {
+    return 'Your session has expired. Please login again.';
+  } else if (error.contains('500') || error.contains('502') || error.contains('503')) {
+    return 'Server error. Please try again later.';
+  } else if (error.contains('SocketException') || error.contains('NetworkException')) {
+    return 'No internet connection. Please check your network and try again.';
+  } else if (error.contains('TimeoutException')) {
+    return 'Connection timeout. Please try again.';
+  } else {
+    // For other errors, show a generic message
+    return 'An unexpected error occurred. Please try again.';
+  }
+}
+
 class PatientDashboardScreen extends ConsumerWidget {
   const PatientDashboardScreen({super.key});
 
@@ -24,15 +43,37 @@ class PatientDashboardScreen extends ConsumerWidget {
         // Loading & Error States
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Error: $err', style: const TextStyle(color: Colors.red)),
-              TextButton(
-                onPressed: () => ref.read(dashboardControllerProvider.notifier).refreshData(),
-                child: const Text('Retry'),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, color: Colors.red, size: 48),
+                SizedBox(height: 16),
+                Text(
+                  'Unable to load dashboard',
+                  style: AppTextStyles.headline2.copyWith(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  _getErrorMessage(err.toString()),
+                  style: AppTextStyles.bodyText2,
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => ref.read(dashboardControllerProvider.notifier).refreshData(),
+                  icon: Icon(Icons.refresh),
+                  label: Text('Retry'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         // Success State: Pass data to bodies

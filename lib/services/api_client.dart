@@ -42,8 +42,27 @@ class ApiClient {
     final uri = Uri.parse('$baseUrl$endpoint');
     final headers = await _getHeaders();
 
+    if (kDebugMode) {
+      print('=== API GET REQUEST ===');
+      print('URL: $uri');
+      print('Headers: ${headers.keys.join(", ")}');
+      if (headers['Authorization'] != null) {
+        print('Auth: ${headers['Authorization']!.substring(0, 20)}...');
+      } else {
+        print('Auth: NONE');
+      }
+    }
+
     final response = await http.get(uri, headers: headers);
-    return _handleResponse(response);
+
+    if (kDebugMode) {
+      print('Response Status: ${response.statusCode}');
+      if (response.statusCode != 200) {
+        print('Response Body: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}');
+      }
+    }
+
+    return _handleResponse(response, uri);
   }
 
   // Generic POST
@@ -51,8 +70,12 @@ class ApiClient {
     final uri = Uri.parse('$baseUrl$endpoint');
     final headers = await _getHeaders();
 
+    if (kDebugMode) {
+      print('API POST: $uri');
+    }
+
     final response = await http.post(uri, headers: headers, body: jsonEncode(data));
-    return _handleResponse(response);
+    return _handleResponse(response, uri);
   }
 
   // Generic PUT
@@ -60,8 +83,12 @@ class ApiClient {
     final uri = Uri.parse('$baseUrl$endpoint');
     final headers = await _getHeaders();
 
+    if (kDebugMode) {
+      print('API PUT: $uri');
+    }
+
     final response = await http.put(uri, headers: headers, body: jsonEncode(data));
-    return _handleResponse(response);
+    return _handleResponse(response, uri);
   }
 
   // Generic DELETE
@@ -69,21 +96,31 @@ class ApiClient {
     final uri = Uri.parse('$baseUrl$endpoint');
     final headers = await _getHeaders();
 
+    if (kDebugMode) {
+      print('API DELETE: $uri');
+    }
+
     final response = data != null
         ? await http.delete(uri, headers: headers, body: jsonEncode(data))
         : await http.delete(uri, headers: headers);
-    return _handleResponse(response);
+    return _handleResponse(response, uri);
   }
 
-  dynamic _handleResponse(http.Response response) {
+  dynamic _handleResponse(http.Response response, Uri uri) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return null;
       return jsonDecode(response.body);
     } else if (response.statusCode == 401) {
       // Handle Token Expiry (Optional: Trigger logout logic here)
       // TODO: Add logout logic here?
+      if (kDebugMode) {
+        print('API 401 Unauthorized: $uri');
+      }
       throw Exception('Unauthorized: Please login again.');
     } else {
+      if (kDebugMode) {
+        print('API Error ${response.statusCode} from $uri: ${response.body}');
+      }
       throw Exception('Error ${response.statusCode}: ${response.body}');
     }
   }

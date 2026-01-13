@@ -24,48 +24,55 @@ class DashboardRepository {
   }
 
   // --- 1. LATEST GLUCOSE ---
-  Future<GlucoseReading> getLatestGlucose() async {
-    final patientId = await _getPatientId();
-    final response = await _client.get('/patients/$patientId/dashboard/glucose/latest');
+  Future<GlucoseReading?> getLatestGlucose() async {
+    try {
+      final patientId = await _getPatientId();
+      final response = await _client.get('/patients/$patientId/dashboard/glucose/latest');
 
-    // Check for null response
-    if (response == null) {
-      return GlucoseReading(
-          value: 0,
-          timestamp: DateTime.now(),
-          trend: 'NULL'
-      );
+      // Check for null response
+      if (response == null) {
+        return null;
+      }
+
+      return GlucoseReading.fromJson(response);
+    } catch (e) {
+      print("Error fetching latest glucose: $e");
+      return null;
     }
-
-    return GlucoseReading.fromJson(response);
   }
 
   // --- 2. GLUCOSE HISTORY ---
   Future<List<GlucoseReading>> getGlucoseHistory(int hours) async {
-    final patientId = await _getPatientId();
-    final response = await _client.get('/patients/$patientId/dashboard/glucose/history?hours=$hours');
+    try {
+      final patientId = await _getPatientId();
+      final response = await _client.get('/patients/$patientId/dashboard/glucose/history?hours=$hours');
 
-    // FIX: Check for null response
-    if (response == null) return [];
+      // FIX: Check for null response
+      if (response == null) return [];
 
-    return (response as List).map((e) => GlucoseReading.fromJson(e)).toList();
+      return (response as List).map((e) => GlucoseReading.fromJson(e)).toList();
+    } catch (e) {
+      print("Error fetching glucose history: $e");
+      return [];
+    }
   }
 
   // --- 3. DASHBOARD STATS ---
-  Future<DashboardStats> getStats() async {
-    final patientId = await _getPatientId();
-    final response = await _client.get('/patients/$patientId/dashboard/stats');
+  Future<DashboardStats?> getStats() async {
+    try {
+      final patientId = await _getPatientId();
+      final response = await _client.get('/patients/$patientId/dashboard/stats');
 
-    // FIX: Check for null response
-    if (response == null) {
-      return DashboardStats(
-          timeInRange: -99,
-          timeBelowRange: 0,
-          averageGlucose: 0
-      );
+      // FIX: Check for null response
+      if (response == null) {
+        return null;
+      }
+
+      return DashboardStats.fromJson(response);
+    } catch (e) {
+      print("Error fetching dashboard stats: $e");
+      return null;
     }
-
-    return DashboardStats.fromJson(response);
   }
 
   Future<List<RecentMeal>> getRecentMeals() async {
