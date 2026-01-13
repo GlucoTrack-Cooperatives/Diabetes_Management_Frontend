@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../repositories/auth_repository.dart';
 import '../../models/login_request.dart';
 import '../../services/secure_storage_service.dart';
+import '../../services/fcm_service.dart';
 
 
 // StateNotifierProvider exposing AsyncValue<void>
@@ -10,14 +11,16 @@ final loginControllerProvider = StateNotifierProvider<LoginController, AsyncValu
   return LoginController(
     ref.watch(authRepositoryProvider),
     ref.watch(storageServiceProvider), // Inject Storage Service
+    ref.watch(fcmServiceProvider),
   );
 });
 
 class LoginController extends StateNotifier<AsyncValue<void>> {
   final AuthRepository _repository;
   final SecureStorageService _storageService;
+  final FcmService _fcmService;
 
-  LoginController(this._repository, this._storageService) : super(const AsyncValue.data(null));
+  LoginController(this._repository, this._storageService, this._fcmService) : super(const AsyncValue.data(null));
 
   Future<void> login(String email, String password) async {
     state = const AsyncValue.loading();
@@ -30,13 +33,17 @@ class LoginController extends StateNotifier<AsyncValue<void>> {
 
       await _storageService.saveCredentials(result.token, result.role, result.userId);
 
+      await _fcmService.registerToken();
+
     });
   }
 
-  // LOGOUT logic
   Future<void> logout() async {
     state = const AsyncValue.loading();
-    await _storageService.clearAll(); // Clears both token and role
+
+    await _fcmService.unregisterToken();
+
+    await _storageService.clearAll();
     state = const AsyncValue.data(null);
   }
 

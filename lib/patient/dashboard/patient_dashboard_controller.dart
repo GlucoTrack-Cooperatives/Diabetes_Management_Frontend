@@ -38,22 +38,36 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
     }
 
     try {
-      // Fetch everything in parallel
+      // Fetch everything in parallel - each method now handles its own errors
       final results = await Future.wait([
         _repository.getLatestGlucose(),       // Index 0
         _repository.getGlucoseHistory(24),    // Index 1
         _repository.getStats(),               // Index 2
         _repository.getRecentMeals(),         // Index 3
-        _repository.getPatientProfile(),
+        _repository.getPatientProfile(),      // Index 4
       ]);
 
-      state = AsyncValue.data(DashboardState(
+      // Even if some API calls failed, we can still show partial data
+      final dashboardState = DashboardState(
         latestGlucose: results[0] as GlucoseReading?,
         history: results[1] as List<GlucoseReading>,
         stats: results[2] as DashboardStats?,
         recentMeals: results[3] as List<RecentMeal>,
-        patient: results[4] as Patient?, // Assign Patient
-      ));
+        patient: results[4] as Patient?,
+      );
+
+      // Check if we have at least some data to display
+      final hasAnyData = dashboardState.latestGlucose != null ||
+          dashboardState.history.isNotEmpty ||
+          dashboardState.recentMeals.isNotEmpty ||
+          dashboardState.patient != null;
+
+      if (!hasAnyData) {
+        // No data at all - might be a backend connectivity issue
+        throw Exception('Unable to connect to the server. Please check your internet connection and ensure the backend server is running.');
+      }
+
+      state = AsyncValue.data(dashboardState);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }
