@@ -31,14 +31,23 @@ class SettingsRepository {
     await _client.put('/patients/$patientId/confirm-physician', {});
   }
 
-  // inside SettingsRepository class...
+  Future<Map<String, dynamic>> getPatientSettings() async {
+    final response = await _client.get('/patients/settings');
+    if (response is Map<String, dynamic>) {
+      return response;
+    }
 
-  Future<void> updateAlertSettings(String patientId, Map<String, dynamic> data) async {
-    // Assuming you create a specific endpoint like: PUT /api/patients/{id}/alert-settings
-    final response = await _client.put('/patients/$patientId/alert-settings', data);
+    // If response is a Response object from Dio:
+    return response.data as Map<String, dynamic>;
+  }
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to update alert settings');
+  // UPDATE the clinical settings
+  Future<void> updatePatientSettings(Map<String, dynamic> data) async {
+    // Matches Backend: @PutMapping @RequestMapping("/api/patients/settings")
+    final response = await _client.put('/patients/settings', data);
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to update patient settings');
     }
   }
 
