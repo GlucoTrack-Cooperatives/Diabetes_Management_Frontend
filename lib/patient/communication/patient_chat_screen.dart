@@ -1,97 +1,62 @@
-import 'package:diabetes_management_system/theme/app_colors.dart';
-import 'package:diabetes_management_system/theme/app_text_styles.dart';
-import 'package:diabetes_management_system/utils/responsive_layout.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../widgets/chat_view.dart';
+import '../../utils/responsive_layout.dart';
+import '../../controllers/chat_controller.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_text_styles.dart';
 
-class PatientChatScreen extends StatelessWidget {
+class PatientChatScreen extends ConsumerWidget {
   const PatientChatScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // The Scaffold is provided by PatientMainScreen
-    return ResponsiveLayout(
-      mobileBody: _ChatBody(),
-      desktopBody: _DesktopChatBody(),
-    );
-  }
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final threadsAsync = ref.watch(chatThreadsProvider);
 
-// For desktop, we can constrain the width for better readability
-class _DesktopChatBody extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: 800),
-        child: _ChatBody(),
-      ),
-    );
-  }
-}
+    return threadsAsync.when(
+      data: (threads) {
+        if (threads.isEmpty) {
+          return const Center(child: Text("No chat thread found with your physician."));
+        }
 
-// The main content of the chat screen, shared by mobile and desktop
-class _ChatBody extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _SystemAlertCard(),
-            SizedBox(height: 16),
-            _ChatThreadList(),
-          ],
-        ),
-      ),
-    );
-  }
-}
+        // Assuming the patient has only one primary physician thread
+        final mainThread = threads.first;
 
-class _SystemAlertCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: AppColors.error.withOpacity(0.1),
-      child: ListTile(
-        leading: Icon(Icons.error_outline, color: AppColors.error),
-        title: Text('CRITICAL ALERT', style: AppTextStyles.bodyText1.copyWith(color: AppColors.error, fontWeight: FontWeight.bold)),
-        subtitle: Text('Your physician requires a check-in. Tap to view.', style: AppTextStyles.bodyText2.copyWith(color: AppColors.error)),
-        onTap: () {},
-      ),
-    );
-  }
-}
-
-class _ChatThreadList extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // Mock data for chat threads
-    final List<Map<String, String>> mockThreads = [
-      {'name': 'Dr. Evelyn Smith', 'message': 'Sounds good, let\'s review the new data tomorrow.', 'time': '2:45 PM'},
-      {'name': 'System Alerts', 'message': 'Reminder: Your upcoming appointment is in 3 days.', 'time': 'Yesterday'},
-      {'name': 'Support Team', 'message': 'We have resolved the issue with your account.', 'time': '3d ago'},
-    ];
-
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
-        itemCount: mockThreads.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            leading: CircleAvatar(
-              child: Text(mockThreads[index]['name']![0]), // First letter of name
+        return ResponsiveLayout(
+          mobileBody: _PatientChatBody(threadId: mainThread.id, physicianName: mainThread.physicianName),
+          desktopBody: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: _PatientChatBody(threadId: mainThread.id, physicianName: mainThread.physicianName),
             ),
-            title: Text(mockThreads[index]['name']!, style: AppTextStyles.bodyText1),
-            subtitle: Text(mockThreads[index]['message']!, style: AppTextStyles.bodyText2, overflow: TextOverflow.ellipsis),
-            trailing: Text(mockThreads[index]['time']!, style: AppTextStyles.bodyText2),
-            onTap: () {},
-          );
-        },
-        separatorBuilder: (context, index) => Divider(height: 1),
-      ),
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Error: $err')),
     );
   }
 }
+
+class _PatientChatBody extends StatelessWidget {
+  final String threadId;
+  final String physicianName;
+
+  const _PatientChatBody({required this.threadId, required this.physicianName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          child: ChatView(
+            title: "Dr. $physicianName",
+            threadId: threadId,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+

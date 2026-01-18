@@ -1,5 +1,5 @@
 import 'package:diabetes_management_system/auth/login/login_screen.dart';
-import 'package:diabetes_management_system/physician/communication/physician_chat_screen.dart';
+import 'package:diabetes_management_system/physician/communication/physician_chat_list.dart';
 import 'package:diabetes_management_system/physician/dashboard/physician_triage_dashboard_screen.dart';
 import 'package:diabetes_management_system/theme/app_colors.dart';
 import 'package:diabetes_management_system/utils/responsive_layout.dart';
@@ -21,8 +21,8 @@ class _PhysicianMainScreenState extends ConsumerState<PhysicianMainScreen> {
   int _selectedIndex = 0;
 
   static final List<Widget> _widgetOptions = <Widget>[
-    PhysicianTriageDashboardScreen(),
-    PhysicianChatScreen(),
+    const PhysicianTriageDashboardScreen(),
+    const PhysicianChatList(),
   ];
 
   static const List<String> _widgetTitles = <String>[

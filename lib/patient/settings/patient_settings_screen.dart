@@ -4,11 +4,11 @@ import 'package:diabetes_management_system/models/update_alert_settings_request.
 import 'package:diabetes_management_system/models/patient_alert_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/custom_elevated_button.dart';
-import '../../widgets/custom_text_form_field.dart';
-import '../dashboard/patient_dashboard_controller.dart';
-import 'patient_settings_controller.dart';
+import 'package:diabetes_management_system/theme/app_colors.dart';
+import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
+import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
+import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_controller.dart';
+import 'package:diabetes_management_system/patient/settings/patient_settings_controller.dart';
 
 class PatientSettingsScreen extends ConsumerStatefulWidget {
   const PatientSettingsScreen({super.key});
@@ -313,8 +313,6 @@ class _PatientSettingsScreenState extends ConsumerState<PatientSettingsScreen> {
       ),
     );
   }
-
-  // --- Helper methods from previous version remain for consistency ---
 
   Widget _buildAlertPreviewSection() {
     final double? critLow = double.tryParse(_critLowCtrl.text);
