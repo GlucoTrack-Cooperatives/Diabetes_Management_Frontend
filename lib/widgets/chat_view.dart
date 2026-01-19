@@ -35,12 +35,31 @@ class _ChatViewState extends ConsumerState<ChatView> {
     _messageController.clear();
   }
 
+  // Helper to format the date header string
+  String _getDateHeader(DateTime date) {
+    // Convert the message date to local time first
+    final localDate = date.toLocal();
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final msgDate = DateTime(localDate.year, localDate.month, localDate.day);
+
+    if (msgDate == today) return "Today";
+    if (msgDate == yesterday) return "Yesterday";
+
+    if (today.difference(msgDate).inDays < 7) {
+      return DateFormat('EEEE').format(localDate);
+    }
+
+    return DateFormat('d MMM').format(localDate);
+  }
+
   @override
   Widget build(BuildContext context) {
     final messagesAsync = ref.watch(chatMessagesProvider(widget.threadId));
     final currentUserIdAsync = ref.watch(currentUserIdProvider);
 
-    // REMOVE Scaffold and AppBar
     return Column(
       children: [
         Expanded(
@@ -54,7 +73,28 @@ class _ChatViewState extends ConsumerState<ChatView> {
                 itemBuilder: (context, index) {
                   final msg = messages[index];
                   bool isMe = msg.senderId == currentUserId;
-                  return _buildMessageBubble(msg, isMe);
+
+                  // Date logic for headers
+                  bool showDateHeader = false;
+                  if (index == messages.length - 1) {
+                    // Always show header for the very first message in history
+                    showDateHeader = true;
+                  } else {
+                    // Compare current message date with the next one in the list (previous chronologically)
+                    final prevMsg = messages[index + 1];
+                    if (msg.timestamp.day != prevMsg.timestamp.day ||
+                        msg.timestamp.month != prevMsg.timestamp.month ||
+                        msg.timestamp.year != prevMsg.timestamp.year) {
+                      showDateHeader = true;
+                    }
+                  }
+
+                  return Column(
+                    children: [
+                      if (showDateHeader) _buildDateHeader(msg.timestamp),
+                      _buildMessageBubble(msg, isMe),
+                    ],
+                  );
                 },
               );
             },
@@ -64,6 +104,29 @@ class _ChatViewState extends ConsumerState<ChatView> {
         ),
         _buildInputArea(),
       ],
+    );
+  }
+
+  Widget _buildDateHeader(DateTime date) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            _getDateHeader(date),
+            style: AppTextStyles.bodyText2.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -86,7 +149,8 @@ class _ChatViewState extends ConsumerState<ChatView> {
             ),
           ),
           Text(
-            DateFormat('HH:mm').format(msg.timestamp),
+            // ADD .toLocal() HERE
+            DateFormat('HH:mm').format(msg.timestamp.toLocal()),
             style: AppTextStyles.bodyText2.copyWith(fontSize: 10),
           ),
         ],
