@@ -48,16 +48,18 @@ class _PhysicianChatListState extends ConsumerState<PhysicianChatList> {
                 itemCount: filteredThreads.length,
                 separatorBuilder: (context, index) => const Divider(),
                 itemBuilder: (context, index) {
-                  final thread = filteredThreads[index];
-                  return ListTile(
-                    leading: CircleAvatar(child: Text(thread.participantName.isNotEmpty ? thread.participantName[0] : '?')),
+                  final thread = filteredThreads[index];                  return ListTile(
+                    leading: CircleAvatar(
+                        child: Text(thread.participantName.isNotEmpty ? thread.participantName[0] : '?')
+                    ),
                     title: Text(thread.participantName, style: AppTextStyles.bodyText1),
                     subtitle: Text(
                       thread.lastMessage.isNotEmpty ? thread.lastMessage : "No messages yet",
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    trailing: Text(DateFormat('HH:mm').format(thread.lastMessageTime)),
+                    // FIX: Added .toLocal() here to convert from UTC to Poland time
+                    trailing: Text(DateFormat('HH:mm').format(thread.lastMessageTime.toLocal())),
                     onTap: () async {
                       await Navigator.push(
                         context,
