@@ -23,12 +23,14 @@ class PatientChatScreen extends ConsumerWidget {
         final mainThread = threads.first;
 
         return ResponsiveLayout(
-          mobileBody: _PatientChatBody(threadId: mainThread.id, physicianName: mainThread.physicianName),
-          desktopBody: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 800),
-              child: _PatientChatBody(threadId: mainThread.id, physicianName: mainThread.physicianName),
-            ),
+          mobileBody: _PatientChatBody(
+              threadId: mainThread.id,
+              physicianName: mainThread.physicianName
+          ),
+          // Removed ConstrainedBox and Center to allow chat to fill the available space
+          desktopBody: _PatientChatBody(
+              threadId: mainThread.id,
+              physicianName: mainThread.physicianName
           ),
         );
       },

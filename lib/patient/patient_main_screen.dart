@@ -1,4 +1,5 @@
 import 'package:diabetes_management_system/auth/login/login_screen.dart';
+import 'package:diabetes_management_system/controllers/chat_controller.dart';
 import 'package:diabetes_management_system/patient/communication/patient_chat_screen.dart';
 import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_screen.dart';
 import 'package:diabetes_management_system/patient/lifestyle/lifestyle_controller.dart';
@@ -100,22 +101,34 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch the chat threads to get the physician's name for the AppBar
+    final chatThreads = ref.watch(chatThreadsProvider);
+
+    String appBarTitle = _widgetTitles[_selectedIndex];
+
+    // If we are on the Chat screen (index 1), try to get the doctor's name
+    if (_selectedIndex == 1) {
+      chatThreads.whenData((threads) {
+        if (threads.isNotEmpty) {
+          appBarTitle = "Dr. ${threads.first.physicianName}";
+        }
+      });
+    }
+
     return ResponsiveLayout(
-      mobileBody: _buildMobileLayout(),
-      desktopBody: _buildDesktopLayout(),
+      mobileBody: _buildMobileLayout(appBarTitle), // Pass title here
+      desktopBody: _buildDesktopLayout(appBarTitle), // Pass title here
     );
   }
 
   // The mobile layout with a Scaffold and the custom BottomNavigationBar
-  Widget _buildMobileLayout() {
+  Widget _buildMobileLayout(String title) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_widgetTitles.elementAt(_selectedIndex)),
+        title: Text(title), // Dynamic title
         actions: _buildAppBarActions(),
       ),
-      body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
-      ),
+      body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: PatientBottomNav(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
@@ -125,7 +138,7 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
   }
 
   // The desktop layout with a permanent NavigationDrawer
-  Widget _buildDesktopLayout() {
+  Widget _buildDesktopLayout(String title) {
     return Scaffold(
       body: Row(
         children: [
@@ -157,21 +170,19 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
               ),
             ],
           ),
-          const VerticalDivider(thickness: 1, width: 1),
-          Expanded(
-            child: Scaffold(
-              appBar: AppBar(
-                title: Text(_widgetTitles.elementAt(_selectedIndex)),
-                actions: [
-                  ..._buildAppBarActions(), // Use updated actions
-                  const SizedBox(width: 16),
-                ],
-              ),
-              body: Center(
-                child: _widgetOptions.elementAt(_selectedIndex),
+            const VerticalDivider(thickness: 1, width: 1),
+            Expanded(
+              child: Scaffold(
+                appBar: AppBar(
+                  title: Text(title), // Dynamic title
+                  actions: [
+                    ..._buildAppBarActions(),
+                    const SizedBox(width: 16),
+                  ],
+                ),
+                body: _widgetOptions.elementAt(_selectedIndex), // Removed Center() to allow full width
               ),
             ),
-          ),
         ],
       ),
     );

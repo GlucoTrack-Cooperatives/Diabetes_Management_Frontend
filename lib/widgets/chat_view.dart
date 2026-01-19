@@ -40,34 +40,30 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final messagesAsync = ref.watch(chatMessagesProvider(widget.threadId));
     final currentUserIdAsync = ref.watch(currentUserIdProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body: Column(
-        children: [
-          Expanded(
-            child: messagesAsync.when(
-              data: (messages) {
-                final currentUserId = currentUserIdAsync.value;
-                // No need to reverse list manually, ListView.builder with reverse: true handles it
-                return ListView.builder(
-                  reverse: true, // Newer messages at bottom (index 0 is newest)
-                  padding: const EdgeInsets.all(16),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    // With reverse: true, index 0 is the last item in the list
-                    final msg = messages[index];
-                    bool isMe = msg.senderId == currentUserId;
-                    return _buildMessageBubble(msg, isMe);
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
-            ),
+    // REMOVE Scaffold and AppBar
+    return Column(
+      children: [
+        Expanded(
+          child: messagesAsync.when(
+            data: (messages) {
+              final currentUserId = currentUserIdAsync.value;
+              return ListView.builder(
+                reverse: true,
+                padding: const EdgeInsets.all(16),
+                itemCount: messages.length,
+                itemBuilder: (context, index) {
+                  final msg = messages[index];
+                  bool isMe = msg.senderId == currentUserId;
+                  return _buildMessageBubble(msg, isMe);
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, stack) => Center(child: Text('Error: $err')),
           ),
-          _buildInputArea(),
-        ],
-      ),
+        ),
+        _buildInputArea(),
+      ],
     );
   }
 
