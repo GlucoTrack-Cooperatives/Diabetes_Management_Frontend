@@ -53,7 +53,7 @@ class _LoginDesktopBody extends StatelessWidget {
             child: Center(
               child: Text(
                 'Diabetes Management System',
-                style: AppTextStyles.headline1.copyWith(color: Colors.white),
+                style: AppTextStyles.headline1.copyWith(color: Colors.black),
               ),
             ),
           ),
@@ -168,9 +168,9 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
             onPressed: isLoading ? null : _onLoginPressed,
             child: isLoading
                 ? const SizedBox(
-              height: 24,
+              height: 30,
               width: 24,
-              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.0),
+              child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.0),
             )
                 : const Text('Login'),
           ),

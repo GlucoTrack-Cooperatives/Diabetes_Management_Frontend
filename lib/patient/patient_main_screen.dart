@@ -1,6 +1,7 @@
 import 'package:diabetes_management_system/auth/login/login_screen.dart';
 import 'package:diabetes_management_system/patient/communication/patient_chat_screen.dart';
 import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_screen.dart';
+import 'package:diabetes_management_system/patient/lifestyle/lifestyle_controller.dart';
 import 'package:diabetes_management_system/patient/lifestyle/lifestyle_tracker_screen.dart';
 import 'package:diabetes_management_system/patient/logging/food_insulin_log_screen.dart';
 import 'package:diabetes_management_system/patient/settings/patient_settings_screen.dart';
@@ -68,6 +69,21 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
 
   List<Widget> _buildAppBarActions() {
     return [
+      if (_selectedIndex == 3)
+        IconButton(
+          icon: const Icon(Icons.sync),
+          tooltip: 'Sync Health Data',
+          onPressed: () {
+            // Access the provider directly from here
+            ref.read(lifestyleControllerProvider.notifier).syncHealthData();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Syncing health data...'),
+                  duration: Duration(seconds: 1)
+              ),
+            );
+          },
+        ),
       IconButton(
         icon: const Icon(Icons.settings, color: Colors.grey),
         tooltip: "Settings",

@@ -14,32 +14,14 @@ class LifestyleTrackerScreen extends ConsumerWidget {
     // Watch the controller state
     final lifestyleState = ref.watch(lifestyleControllerProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Lifestyle Tracker'),
-        actions: [
-          // SYNC BUTTON: This allows the user to manually request permissions/data
-          IconButton(
-            icon: const Icon(Icons.sync),
-            tooltip: 'Sync Health Data',
-            onPressed: () {
-              ref.read(lifestyleControllerProvider.notifier).syncHealthData();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Syncing health data...'), duration: Duration(seconds: 1)),
-              );
-            },
-          ),
-        ],
+    // Remove Scaffold and AppBar. Return the body directly.
+    return ResponsiveLayout(
+      mobileBody: _MobileLifestyleBody(
+          data: lifestyleState,
+          onRefresh: () => ref.read(lifestyleControllerProvider.notifier).syncHealthData()
       ),
-      body: ResponsiveLayout(
-        // Pass the state and the refresh function down
-        mobileBody: _MobileLifestyleBody(
-            data: lifestyleState,
-            onRefresh: () => ref.read(lifestyleControllerProvider.notifier).syncHealthData()
-        ),
-        desktopBody: _DesktopLifestyleBody(
-            data: lifestyleState
-        ),
+      desktopBody: _DesktopLifestyleBody(
+          data: lifestyleState
       ),
     );
   }

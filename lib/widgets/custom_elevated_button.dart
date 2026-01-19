@@ -24,11 +24,11 @@ class CustomElevatedButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         // Use minimumSize to enforce height (50 is larger than default)
         // If width is provided, use it; otherwise allow it to be flexible.
-        minimumSize: Size(width ?? 0, height ?? 50),
+        minimumSize: Size(width ?? 0, height ?? 60),
         padding: const EdgeInsets.symmetric(horizontal: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      child: child ?? Text(text!, style: const TextStyle(fontSize: 16)),
+      child: child ?? Text(text!, style: const TextStyle(fontSize: 16).copyWith(color: Colors.black)),
     );
 
     // 2. If a specific width is provided, we need to wrap the button
