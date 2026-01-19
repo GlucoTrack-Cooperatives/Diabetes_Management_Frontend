@@ -111,17 +111,30 @@ class ApiClient {
       if (response.body.isEmpty) return null;
       return jsonDecode(response.body);
     } else if (response.statusCode == 401) {
-      // Handle Token Expiry (Optional: Trigger logout logic here)
-      // TODO: Add logout logic here?
       if (kDebugMode) {
         print('API 401 Unauthorized: $uri');
       }
       throw Exception('Unauthorized: Please login again.');
     } else {
-      if (kDebugMode) {
-        print('API Error ${response.statusCode} from $uri: ${response.body}');
+      // UPDATED: Extract message from error response
+      String errorMessage = 'Error ${response.statusCode}';
+
+      try {
+        final responseData = jsonDecode(response.body);
+        if (responseData is Map && responseData.containsKey('message')) {
+          errorMessage = responseData['message'];
+        } else {
+          errorMessage = response.body;
+        }
+      } catch (e) {
+        errorMessage = response.body;
       }
-      throw Exception('Error ${response.statusCode}: ${response.body}');
+
+      if (kDebugMode) {
+        print('API Error ${response.statusCode} from $uri: $errorMessage');
+      }
+
+      throw Exception(errorMessage);
     }
   }
 }

@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_client.dart';
 import '../models/physician_patient_summary.dart';
+import 'package:dio/dio.dart';
 
 // 1. Provider to access this repository globally
 final physicianRepositoryProvider = Provider<PhysicianRepository>((ref) {
@@ -14,10 +17,10 @@ class PhysicianRepository {
   PhysicianRepository(this._apiClient);
 
   Future<void> invitePatient(String email) async {
-    // Matches the backend endpoint: POST /api/physicians/invite-patient
     await _apiClient.post('/physicians/invite-patient', {
       'patientEmail': email,
     });
+
   }
 
   Future<List<PhysicianPatientSummary>> getMyPatients() async {

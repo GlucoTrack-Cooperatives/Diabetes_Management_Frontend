@@ -289,6 +289,10 @@ class _PatientSettingsScreenState extends ConsumerState<PatientSettingsScreen> {
           const SizedBox(height: 12),
           CustomTextFormField(controller: _dobController, labelText: "Date of Birth (YYYY-MM-DD)"),
           const SizedBox(height: 20),
+          CustomTextFormField(controller: _diagnosisDateController, labelText: "Diagnosis Date", keyboardType: TextInputType.datetime, validator: (v) => v!.isEmpty ? "Required" : null,),
+          const SizedBox(height: 16),
+          CustomTextFormField(controller: _emergencyContactPhoneController, labelText: "Emergency Contact", keyboardType: TextInputType.phone, validator: (v) => v!.isEmpty ? "Required" : null,),
+          const SizedBox(height: 20),
           CustomElevatedButton(
             text: "Update Profile",
             onPressed: isLoading ? null : () => _handleUpdatePersonalInfo(patientId),
@@ -374,6 +378,8 @@ class _PatientSettingsScreenState extends ConsumerState<PatientSettingsScreen> {
   }
 
   Widget _buildPhysicianSection(Patient patient) {
+    debugPrint('Physician Name: ${patient.physicianName}, IsConfirmed: ${patient.isPhysicianConfirmed}');
+
     if (patient.physicianName == null) return const SizedBox.shrink();
     final isConfirmed = patient.isPhysicianConfirmed == true;
     return Column(

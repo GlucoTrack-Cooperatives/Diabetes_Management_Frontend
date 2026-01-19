@@ -24,8 +24,9 @@ class PhysicianTriageDashboardScreen extends ConsumerWidget {
           }
         },
         error: (err, stack) {
+          final errorMessage = err.toString().replaceFirst('Exception: ', '');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${err.toString()}'), backgroundColor: Colors.red),
+            SnackBar(content: Text(errorMessage), backgroundColor: Colors.red, duration: const Duration(seconds: 4)),
           );
         },
         loading: () {},
@@ -98,12 +99,12 @@ class PhysicianTriageDashboardScreen extends ConsumerWidget {
                 return ElevatedButton(
                   onPressed: state.isLoading
                       ? null
-                      : () {
+                      : () async {
                     if (formKey.currentState!.validate()) {
                       // Call the controller
-                      ref.read(physicianDashboardControllerProvider.notifier)
+                      await ref.read(physicianDashboardControllerProvider.notifier)
                           .invitePatientByEmail(emailController.text.trim());
-                      Navigator.pop(context); // Close dialog immediately
+                      Navigator.pop(context);
                     }
                   },
                   child: state.isLoading
