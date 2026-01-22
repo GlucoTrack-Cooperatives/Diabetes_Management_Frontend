@@ -4,29 +4,34 @@ import 'package:diabetes_management_system/theme/app_text_styles.dart';
 import 'package:diabetes_management_system/utils/responsive_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'physician_dashboard_controller.dart'; // Import the new controller
+import 'physician_dashboard_controller.dart';
 
-// 1. Change to ConsumerWidget
 class PhysicianTriageDashboardScreen extends ConsumerWidget {
   const PhysicianTriageDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-
-    // 2. Listen for success/error to show SnackBars
+    // Listen for success/error to show SnackBars
     ref.listen(physicianDashboardControllerProvider, (previous, next) {
       next.when(
         data: (_) {
           if (previous?.isLoading == true) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Invitation sent to patient!'), backgroundColor: Colors.green),
+              const SnackBar(
+                content: Text('Invitation sent to patient!'),
+                backgroundColor: Colors.green,
+              ),
             );
           }
         },
         error: (err, stack) {
           final errorMessage = err.toString().replaceFirst('Exception: ', '');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMessage), backgroundColor: Colors.red, duration: const Duration(seconds: 4)),
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
           );
         },
         loading: () {},
@@ -34,12 +39,10 @@ class PhysicianTriageDashboardScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      // Wrapped in Scaffold to support FloatingActionButton
       body: ResponsiveLayout(
-        mobileBody: _PatientList(isDesktop: false),
-        desktopBody: _PatientList(isDesktop: true),
+        mobileBody: const _PatientList(isDesktop: false),
+        desktopBody: const _PatientList(isDesktop: true),
       ),
-      // 3. Add the Add Button
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddPatientDialog(context, ref),
         label: const Text("Add Patient"),
@@ -49,7 +52,6 @@ class PhysicianTriageDashboardScreen extends ConsumerWidget {
     );
   }
 
-  // 4. The Search Dialog
   void _showAddPatientDialog(BuildContext context, WidgetRef ref) {
     final emailController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -92,7 +94,7 @@ class PhysicianTriageDashboardScreen extends ConsumerWidget {
               onPressed: () => Navigator.pop(context),
               child: const Text("Cancel"),
             ),
-            Consumer( // Use Consumer to watch loading state specifically for the button
+            Consumer(
               builder: (context, ref, child) {
                 final state = ref.watch(physicianDashboardControllerProvider);
 
@@ -101,14 +103,18 @@ class PhysicianTriageDashboardScreen extends ConsumerWidget {
                       ? null
                       : () async {
                     if (formKey.currentState!.validate()) {
-                      // Call the controller
-                      await ref.read(physicianDashboardControllerProvider.notifier)
+                      await ref
+                          .read(physicianDashboardControllerProvider.notifier)
                           .invitePatientByEmail(emailController.text.trim());
-                      Navigator.pop(context);
+                      if (context.mounted) Navigator.pop(context);
                     }
                   },
                   child: state.isLoading
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                       : const Text("Send Request"),
                 );
               },
@@ -120,14 +126,18 @@ class PhysicianTriageDashboardScreen extends ConsumerWidget {
   }
 }
 
-class _PatientList extends ConsumerWidget { // Change to ConsumerWidget
+class _PatientList extends ConsumerWidget {
   final bool isDesktop;
 
   const _PatientList({required this.isDesktop});
 
+  bool _isHighRisk(double? glucose) {
+    if (glucose == null) return false;
+    return glucose < 70 || glucose > 250;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the data provider
     final patientsAsync = ref.watch(physicianPatientsListProvider);
 
     return Padding(
@@ -137,49 +147,64 @@ class _PatientList extends ConsumerWidget { // Change to ConsumerWidget
         error: (err, stack) => Center(child: Text('Error loading patients: $err')),
         data: (patients) {
           if (patients.isEmpty) {
-            return const Center(child: Text("No patients assigned yet. Click 'Add Patient' to start."));
+            return const Center(
+              child: Text("No patients assigned yet. Click 'Add Patient' to start."),
+            );
           }
 
+          final sortedPatients = List.from(patients);
+          sortedPatients.sort((a, b) {
+            final aRisk = _isHighRisk(a.latestGlucoseValue);
+            final bRisk = _isHighRisk(b.latestGlucoseValue);
+
+            if (aRisk && !bRisk) return -1;
+            if (!aRisk && bRisk) return 1;
+
+            if (!a.isPhysicianConfirmed && b.isPhysicianConfirmed) return -1;
+            if (a.isPhysicianConfirmed && !b.isPhysicianConfirmed) return 1;
+
+            return 0;
+          });
+
           return ListView.builder(
-            itemCount: patients.length,
+            itemCount: sortedPatients.length,
             itemBuilder: (context, index) {
-              final patient = patients[index];
+              final patient = sortedPatients[index];
+              final isHighRisk = _isHighRisk(patient.latestGlucoseValue);
+
               return Card(
                 margin: const EdgeInsets.only(bottom: 16),
+                shape: isHighRisk
+                    ? RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Colors.red, width: 2),
+                )
+                    : null,
                 child: ListTile(
                   contentPadding: const EdgeInsets.all(16),
                   leading: CircleAvatar(
-                    backgroundColor: patient.isPhysicianConfirmed ? AppColors.primary : Colors.grey,
-                    child: Text(
-                        patient.fullName.isNotEmpty ? patient.fullName[0].toUpperCase() : '?',
-                        style: const TextStyle(color: Colors.white)
+                    backgroundColor: isHighRisk
+                        ? Colors.red
+                        : (patient.isPhysicianConfirmed
+                        ? AppColors.primary
+                        : Colors.grey),
+                    child: Icon(
+                      isHighRisk ? Icons.warning_amber_rounded : Icons.person,
+                      color: Colors.white,
                     ),
                   ),
                   title: Row(
                     children: [
                       Text(
-                          '${patient.fullName} (${patient.age}yo)',
-                          style: AppTextStyles.headline2
+                        '${patient.fullName} (${patient.age}yo)',
+                        style: AppTextStyles.headline2,
                       ),
-                      if (!patient.isPhysicianConfirmed) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.orange),
-                          ),
-                          child: const Text(
-                            "Pending",
-                            style: TextStyle(
-                                color: Colors.orange,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold
-                            ),
-                          ),
-                        ),
-                      ],
+                      const SizedBox(width: 8),
+                      // --- UI: RISK TAGS ---
+                      if (isHighRisk)
+                        _buildBadge("CRITICAL", Colors.red)
+                      else if (!patient.isPhysicianConfirmed)
+                        _buildBadge("PENDING", Colors.orange),
                     ],
                   ),
                   subtitle: Padding(
@@ -187,25 +212,36 @@ class _PatientList extends ConsumerWidget { // Change to ConsumerWidget
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Phone: ${patient.phoneNumber}', style: AppTextStyles.bodyText2),
+                        Text(
+                          'Phone: ${patient.phoneNumber}',
+                          style: AppTextStyles.bodyText2,
+                        ),
                         if (patient.latestGlucoseValue != null)
                           Text(
                             'Latest Glucose: ${patient.latestGlucoseValue} mg/dL (${patient.latestGlucoseTrend})',
-                            style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              color: isHighRisk ? Colors.red : Colors.black87,
+                              fontWeight:
+                              isHighRisk ? FontWeight.bold : FontWeight.w500,
+                            ),
                           ),
                       ],
                     ),
                   ),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
                   onTap: () {
-                    // Only allow navigation if confirmed, or show warning
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => PatientAnalysisScreen(
-                            patientId: patient.id,
-                            patientName: patient.fullName,
-                          )),
+                        builder: (context) => PatientAnalysisScreen(
+                          patientId: patient.id,
+                          patientName: patient.fullName,
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -213,6 +249,25 @@ class _PatientList extends ConsumerWidget { // Change to ConsumerWidget
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
