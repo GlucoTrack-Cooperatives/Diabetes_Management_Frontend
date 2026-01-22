@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PatientAnalysisScreen extends ConsumerWidget {
-
   final String patientId;
   final String patientName;
 
@@ -25,9 +24,13 @@ class PatientAnalysisScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(patientName, style: AppTextStyles.headline2),
         actions: [
-          IconButton(icon: Icon(Icons.refresh, color: AppColors.primary), onPressed: () {
-            ref.read(patientAnalysisControllerProvider(patientId).notifier).loadData();
-          }),
+          IconButton(
+              icon: Icon(Icons.refresh, color: AppColors.primary),
+              onPressed: () {
+                ref
+                    .read(patientAnalysisControllerProvider(patientId).notifier)
+                    .loadData();
+              }),
         ],
       ),
       body: state.isLoading
@@ -51,7 +54,6 @@ class PatientAnalysisScreen extends ConsumerWidget {
   }
 }
 
-// ... _ClinicalSummarySection, _SummaryTile, _GlucoseTrendsSection remain the same ...
 class _ClinicalSummarySection extends StatelessWidget {
   final PatientAnalysisState state;
   const _ClinicalSummarySection({required this.state});
@@ -60,11 +62,26 @@ class _ClinicalSummarySection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _SummaryTile(title: 'TIR', value: state.tir, subtitle: 'Target (70-180)', color: Colors.green)),
+        Expanded(
+            child: _SummaryTile(
+                title: 'TIR',
+                value: state.tir,
+                subtitle: 'Target (70-180)',
+                color: Colors.green)),
         SizedBox(width: 8),
-        Expanded(child: _SummaryTile(title: 'TBR', value: state.tbr, subtitle: 'Low (<70)', color: AppColors.error)),
+        Expanded(
+            child: _SummaryTile(
+                title: 'TBR',
+                value: state.tbr,
+                subtitle: 'Low (<70)',
+                color: AppColors.error)),
         SizedBox(width: 8),
-        Expanded(child: _SummaryTile(title: 'CV', value: state.cv, subtitle: 'Stability (Var)', color: Colors.indigoAccent)),
+        Expanded(
+            child: _SummaryTile(
+                title: 'CV',
+                value: state.cv,
+                subtitle: 'Stability (Var)',
+                color: Colors.indigoAccent)),
       ],
     );
   }
@@ -76,7 +93,11 @@ class _SummaryTile extends StatelessWidget {
   final String subtitle;
   final Color color;
 
-  const _SummaryTile({required this.title, required this.value, required this.subtitle, required this.color});
+  const _SummaryTile(
+      {required this.title,
+        required this.value,
+        required this.subtitle,
+        required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -86,17 +107,26 @@ class _SummaryTile extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: Offset(0, 4)),
         ],
         border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
         children: [
-          Text(title, style: AppTextStyles.bodyText2.copyWith(fontWeight: FontWeight.bold, color: Colors.grey[600])),
+          Text(title,
+              style: AppTextStyles.bodyText2.copyWith(
+                  fontWeight: FontWeight.bold, color: Colors.grey[600])),
           SizedBox(height: 8),
-          Text(value, style: AppTextStyles.headline1.copyWith(color: color, fontSize: 28)),
+          Text(value,
+              style: AppTextStyles.headline1.copyWith(color: color, fontSize: 28)),
           SizedBox(height: 4),
-          Text(subtitle, style: AppTextStyles.bodyText2.copyWith(fontSize: 10), textAlign: TextAlign.center, maxLines: 1),
+          Text(subtitle,
+              style: AppTextStyles.bodyText2.copyWith(fontSize: 10),
+              textAlign: TextAlign.center,
+              maxLines: 1),
         ],
       ),
     );
@@ -109,6 +139,24 @@ class _GlucoseTrendsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mealLines = state.foodLogs.map((log) {
+      final hour = log.timestamp.toLocal().hour +
+          (log.timestamp.toLocal().minute / 60.0);
+
+      return VerticalLine(
+        x: hour,
+        color: Colors.orange.withOpacity(0.4),
+        strokeWidth: 2,
+        dashArray: [4, 4],
+        label: VerticalLineLabel(
+          show: true,
+          alignment: Alignment.topRight,
+          padding: const EdgeInsets.only(top: 10),
+          labelResolver: (line) => '🍴',
+        ),
+      );
+    }).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -118,45 +166,62 @@ class _GlucoseTrendsSection extends StatelessWidget {
             Text('24-Hour Glucose Profile', style: AppTextStyles.headline2),
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-              child: Text("Avg: ${state.averageGlucose.toInt()} mg/dL", style: AppTextStyles.bodyText2.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
+              decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4)),
+              child: Text("Avg: ${state.averageGlucose.toInt()} mg/dL",
+                  style: AppTextStyles.bodyText2.copyWith(
+                      color: AppColors.primary, fontWeight: FontWeight.bold)),
             )
           ],
         ),
         SizedBox(height: 16),
         Container(
-          height: 320,
+          height: 450,
           padding: EdgeInsets.only(right: 16, top: 16, bottom: 8),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.grey.shade200),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)
+            ],
           ),
           child: state.glucoseSpots.isEmpty
-              ? Center(child: Text("No glucose data for the last 24h", style: AppTextStyles.bodyText2))
+              ? Center(
+              child: Text("No glucose data for the last 24h",
+                  style: AppTextStyles.bodyText2))
               : LineChart(
             LineChartData(
+              // FIX 1: Enable clipping to stop drawing outside the box
+              clipData: FlClipData.all(),
+
               gridData: FlGridData(
                 show: true,
                 drawVerticalLine: true,
                 horizontalInterval: 50,
                 verticalInterval: 4,
-                getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade100, strokeWidth: 1),
-                getDrawingVerticalLine: (value) => FlLine(color: Colors.grey.shade100, strokeWidth: 1),
+                getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.grey.shade100, strokeWidth: 1),
+                getDrawingVerticalLine: (value) =>
+                    FlLine(color: Colors.grey.shade100, strokeWidth: 1),
               ),
               titlesData: FlTitlesData(
-                rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles:
+                AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 24,
+                    reservedSize: 32,
                     interval: 4,
                     getTitlesWidget: (value, meta) {
                       return Padding(
                         padding: const EdgeInsets.only(top: 8.0),
-                        child: Text('${value.toInt()}:00', style: AppTextStyles.bodyText2.copyWith(color: Colors.grey, fontSize: 10)),
+                        child: Text('${value.toInt()}:00',
+                            style: AppTextStyles.bodyText2.copyWith(
+                                color: Colors.grey, fontSize: 10)),
                       );
                     },
                   ),
@@ -167,19 +232,35 @@ class _GlucoseTrendsSection extends StatelessWidget {
                     interval: 50,
                     reservedSize: 30,
                     getTitlesWidget: (value, meta) {
+                      // Hide the '0' label if it overlaps
                       if (value == 0) return Container();
-                      return Text('${value.toInt()}', style: AppTextStyles.bodyText2.copyWith(color: Colors.grey, fontSize: 10));
+                      return Text('${value.toInt()}',
+                          style: AppTextStyles.bodyText2
+                              .copyWith(color: Colors.grey, fontSize: 10));
                     },
                   ),
                 ),
               ),
               borderData: FlBorderData(show: false),
-              minX: 0, maxX: 24, minY: 40, maxY: 350,
+              minX: 0,
+              maxX: 24,
+              // FIX 2: Lower the minimum Y to 0 so low values fit inside
+              minY: 0,
+              maxY: 350,
               extraLinesData: ExtraLinesData(
-                  horizontalLines: [
-                    HorizontalLine(y: 70, color: Colors.green.withOpacity(0.3), strokeWidth: 1, dashArray: [5,5]),
-                    HorizontalLine(y: 180, color: Colors.green.withOpacity(0.3), strokeWidth: 1, dashArray: [5,5]),
-                  ]
+                horizontalLines: [
+                  HorizontalLine(
+                      y: 70,
+                      color: Colors.green.withOpacity(0.3),
+                      strokeWidth: 1,
+                      dashArray: [5, 5]),
+                  HorizontalLine(
+                      y: 180,
+                      color: Colors.green.withOpacity(0.3),
+                      strokeWidth: 1,
+                      dashArray: [5, 5]),
+                ],
+                verticalLines: mealLines,
               ),
               lineBarsData: [
                 LineChartBarData(
@@ -193,11 +274,13 @@ class _GlucoseTrendsSection extends StatelessWidget {
                       show: true,
                       color: AppColors.primary.withOpacity(0.1),
                       gradient: LinearGradient(
-                        colors: [AppColors.primary.withOpacity(0.2), AppColors.primary.withOpacity(0.0)],
+                        colors: [
+                          AppColors.primary.withOpacity(0.2),
+                          AppColors.primary.withOpacity(0.0)
+                        ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                      )
-                  ),
+                      )),
                 ),
               ],
             ),
@@ -216,7 +299,8 @@ class _DetailedLogsSection extends StatefulWidget {
   __DetailedLogsSectionState createState() => __DetailedLogsSectionState();
 }
 
-class __DetailedLogsSectionState extends State<_DetailedLogsSection> with SingleTickerProviderStateMixin {
+class __DetailedLogsSectionState extends State<_DetailedLogsSection>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -252,11 +336,10 @@ class __DetailedLogsSectionState extends State<_DetailedLogsSection> with Single
         ),
         SizedBox(height: 12),
         SizedBox(
-          height: 400, // Constrain the height of the TabBarView
+          height: 400,
           child: TabBarView(
             controller: _tabController,
             children: [
-              // Pass the filtered food logs to the tab
               _LogbookTab(foodLogs: widget.state.foodLogs),
               _MedicationTab(settings: widget.state.derivedInsulinSettings),
             ],
@@ -267,7 +350,6 @@ class __DetailedLogsSectionState extends State<_DetailedLogsSection> with Single
   }
 }
 
-// UPDATED: This widget now correctly displays data from LogEntryDTO
 class _LogbookTab extends StatelessWidget {
   final List<dynamic> foodLogs;
   const _LogbookTab({required this.foodLogs});
@@ -275,7 +357,9 @@ class _LogbookTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (foodLogs.isEmpty) {
-      return Center(child: Text("No food logs found for this period", style: AppTextStyles.bodyText2));
+      return Center(
+          child: Text("No food logs found for this period",
+              style: AppTextStyles.bodyText2));
     }
     return ListView.separated(
       itemCount: foodLogs.length,
@@ -284,7 +368,6 @@ class _LogbookTab extends StatelessWidget {
         final log = foodLogs[index];
         final timeStr = DateFormat('HH:mm').format(log.timestamp.toLocal());
 
-        // Build a string for the nutritional info, handling nulls
         final nutritionalInfo = [
           if (log.carbs != null) log.carbs,
           if (log.calories != null) log.calories
@@ -300,9 +383,13 @@ class _LogbookTab extends StatelessWidget {
             ),
             child: Icon(Icons.restaurant_menu, color: Colors.orange, size: 24),
           ),
-          title: Text(log.description, style: AppTextStyles.bodyText1.copyWith(fontWeight: FontWeight.bold)),
-          subtitle: Text(nutritionalInfo, style: AppTextStyles.bodyText2.copyWith(color: Colors.grey[600])),
-          trailing: Text(timeStr, style: AppTextStyles.bodyText2.copyWith(color: AppColors.primary)),
+          title: Text(log.description,
+              style:
+              AppTextStyles.bodyText1.copyWith(fontWeight: FontWeight.bold)),
+          subtitle: Text(nutritionalInfo,
+              style: AppTextStyles.bodyText2.copyWith(color: Colors.grey[600])),
+          trailing: Text(timeStr,
+              style: AppTextStyles.bodyText2.copyWith(color: AppColors.primary)),
         );
       },
     );
@@ -321,19 +408,24 @@ class _MedicationTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeader('Detected Insulin Profile'),
-          _MedicationItem(title: 'Basal Insulin', value: settings['Basal'] ?? 'Unknown'),
-          _MedicationItem(title: 'Bolus Insulin', value: settings['Bolus'] ?? 'Unknown'),
+          _MedicationItem(
+              title: 'Basal Insulin', value: settings['Basal'] ?? 'Unknown'),
+          _MedicationItem(
+              title: 'Bolus Insulin', value: settings['Bolus'] ?? 'Unknown'),
         ],
       ),
     );
   }
 }
 
-// Helper widgets for the Medication Tab
 Widget _SectionHeader(String title) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 12.0, top: 8.0),
-    child: Text(title.toUpperCase(), style: AppTextStyles.bodyText2.copyWith(fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey)),
+    child: Text(title.toUpperCase(),
+        style: AppTextStyles.bodyText2.copyWith(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+            color: Colors.grey)),
   );
 }
 
@@ -344,7 +436,8 @@ Widget _MedicationItem({required String title, required String value}) {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: AppTextStyles.bodyText1),
-        Text(value, style: AppTextStyles.bodyText2.copyWith(fontWeight: FontWeight.bold)),
+        Text(value,
+            style: AppTextStyles.bodyText2.copyWith(fontWeight: FontWeight.bold)),
       ],
     ),
   );
