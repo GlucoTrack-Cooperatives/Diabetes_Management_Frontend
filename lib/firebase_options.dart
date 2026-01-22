@@ -41,48 +41,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAC7IhZ3I05A_1ld-SBd4z-fVUvlCRi8PI',
-    appId: '1:988076890118:web:818a12420b82a314760b87',
-    messagingSenderId: '988076890118',
-    projectId: 'mpauni',
-    authDomain: 'mpauni.firebaseapp.com',
-    storageBucket: 'mpauni.firebasestorage.app',
-    measurementId: 'G-0SLSJ1GSX7',
+    apiKey: 'AIzaSyAysyKaQlOxo50fEJziXKga5Jslx2_KMCo',
+    appId: '1:927434418225:web:75a60ef802077a1e3d8d10',
+    messagingSenderId: '927434418225',
+    projectId: 'diabetes-management-d1791',
+    authDomain: 'diabetes-management-d1791.firebaseapp.com',
+    storageBucket: 'diabetes-management-d1791.firebasestorage.app',
+    measurementId: 'G-T06G6SSZ4K',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDj5cSOUGrfhZAxi3R2rOSL391-q-8sscQ',
-    appId: '1:988076890118:android:9b0217002e99649e760b87',
-    messagingSenderId: '988076890118',
-    projectId: 'mpauni',
-    storageBucket: 'mpauni.firebasestorage.app',
+    apiKey: 'AIzaSyBLCoq8UpxjaeQbVAIWWbH5QC81UmsLyYk',
+    appId: '1:927434418225:android:61a0debb2201a6033d8d10',
+    messagingSenderId: '927434418225',
+    projectId: 'diabetes-management-d1791',
+    storageBucket: 'diabetes-management-d1791.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAYGvh0qXH4z39QFoZxI4igAW4c360bsAE',
-    appId: '1:988076890118:ios:7f50b331477b0c3f760b87',
-    messagingSenderId: '988076890118',
-    projectId: 'mpauni',
-    storageBucket: 'mpauni.firebasestorage.app',
+    apiKey: 'AIzaSyCANVnHBChVuMwRweqIRIRodHNMewXS5CM',
+    appId: '1:927434418225:ios:55798cef7c44f36a3d8d10',
+    messagingSenderId: '927434418225',
+    projectId: 'diabetes-management-d1791',
+    storageBucket: 'diabetes-management-d1791.firebasestorage.app',
     iosBundleId: 'com.example.diabetesManagementSystem',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyAYGvh0qXH4z39QFoZxI4igAW4c360bsAE',
-    appId: '1:988076890118:ios:7f50b331477b0c3f760b87',
-    messagingSenderId: '988076890118',
-    projectId: 'mpauni',
-    storageBucket: 'mpauni.firebasestorage.app',
+    apiKey: 'AIzaSyCANVnHBChVuMwRweqIRIRodHNMewXS5CM',
+    appId: '1:927434418225:ios:55798cef7c44f36a3d8d10',
+    messagingSenderId: '927434418225',
+    projectId: 'diabetes-management-d1791',
+    storageBucket: 'diabetes-management-d1791.firebasestorage.app',
     iosBundleId: 'com.example.diabetesManagementSystem',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyAC7IhZ3I05A_1ld-SBd4z-fVUvlCRi8PI',
-    appId: '1:988076890118:web:37c70ba70a399cc8760b87',
-    messagingSenderId: '988076890118',
-    projectId: 'mpauni',
-    authDomain: 'mpauni.firebaseapp.com',
-    storageBucket: 'mpauni.firebasestorage.app',
-    measurementId: 'G-RC833NE14W',
+    apiKey: 'AIzaSyAysyKaQlOxo50fEJziXKga5Jslx2_KMCo',
+    appId: '1:927434418225:web:c12c0ca501a6d6863d8d10',
+    messagingSenderId: '927434418225',
+    projectId: 'diabetes-management-d1791',
+    authDomain: 'diabetes-management-d1791.firebaseapp.com',
+    storageBucket: 'diabetes-management-d1791.firebasestorage.app',
+    measurementId: 'G-NKKBPJMQDT',
   );
+
 }

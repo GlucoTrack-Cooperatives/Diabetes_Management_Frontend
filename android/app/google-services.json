@@ -1,32 +1,13 @@
 {
   "project_info": {
-    "project_number": "988076890118",
-    "project_id": "mpauni",
-    "storage_bucket": "mpauni.firebasestorage.app"
+    "project_number": "927434418225",
+    "project_id": "diabetes-management-d1791",
+    "storage_bucket": "diabetes-management-d1791.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:988076890118:android:eb76869c2c9e2650760b87",
-        "android_client_info": {
-          "package_name": "com.example.diabetes_management_fe"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDj5cSOUGrfhZAxi3R2rOSL391-q-8sscQ"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:988076890118:android:9b0217002e99649e760b87",
+        "mobilesdk_app_id": "1:927434418225:android:61a0debb2201a6033d8d10",
         "android_client_info": {
           "package_name": "com.example.diabetes_management_system"
         }
@@ -34,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDj5cSOUGrfhZAxi3R2rOSL391-q-8sscQ"
+          "current_key": "AIzaSyBLCoq8UpxjaeQbVAIWWbH5QC81UmsLyYk"
         }
       ],
       "services": {
