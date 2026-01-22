@@ -163,6 +163,20 @@ class FcmService {
       showBadge: true,
     );
 
+    // 2. Create channel for Chat Messages
+    const AndroidNotificationChannel chatChannel = AndroidNotificationChannel(
+      'chat_messages',
+      'Chat Messages',
+      description: 'Notifications for new messages',
+      importance: Importance.high,
+      playSound: true,
+      showBadge: true,
+    );
+
+    final platform = _localNotifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await platform?.createNotificationChannel(channel);
+    await platform?.createNotificationChannel(chatChannel);
+
     await _localNotifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
@@ -174,18 +188,17 @@ class FcmService {
 
   /// Handle foreground messages (when app is open)
   void _handleForegroundMessage(RemoteMessage message) {
-    if (kDebugMode) {
-      print('Received foreground message:');
-      print('Title: ${message.notification?.title}');
-      print('Body: ${message.notification?.body}');
-      print('Data: ${message.data}');
-    }
+    // Extract type from data if available, default to 'alert'
+    final String type = message.data['type'] ?? 'alert';
 
-    // Show notification even when app is in foreground
+    String title = message.notification?.title ?? 'New Notification';
+    String body = message.notification?.body ?? '';
+
     _showLocalNotification(
-      title: message.notification?.title ?? 'Glucose Alert',
-      body: message.notification?.body ?? 'New notification',
+      title: title,
+      body: body,
       payload: message.data.toString(),
+      channelId: type == 'chat' ? 'chat_messages' : 'glucose_alerts',
     );
   }
 
@@ -194,20 +207,13 @@ class FcmService {
     required String title,
     required String body,
     String? payload,
+    String channelId = 'glucose_alerts',
   }) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'glucose_alerts',
-      'Glucose Alerts',
-      channelDescription: 'Critical glucose level notifications',
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelId == 'chat_messages' ? 'Chat Messages' : 'Glucose Alerts',
       importance: Importance.max,
       priority: Priority.high,
-      showWhen: true,
-      playSound: true,
-      enableVibration: true,
-      ticker: 'Glucose Alert',
-      fullScreenIntent: true,
-      category: AndroidNotificationCategory.alarm,
-      audioAttributesUsage: AudioAttributesUsage.alarm,
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -217,9 +223,9 @@ class FcmService {
       interruptionLevel: InterruptionLevel.critical,
     );
 
-    const NotificationDetails details = NotificationDetails(
+    final NotificationDetails details = NotificationDetails(
       android: androidDetails,
-      iOS: iosDetails,
+      iOS: const DarwinNotificationDetails(),
     );
 
     await _localNotifications.show(
