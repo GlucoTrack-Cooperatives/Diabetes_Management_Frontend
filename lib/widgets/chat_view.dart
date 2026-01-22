@@ -64,6 +64,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
       children: [
         Expanded(
           child: messagesAsync.when(
+            skipLoadingOnReload: true,
             data: (messages) {
               final currentUserId = currentUserIdAsync.value;
               return ListView.builder(

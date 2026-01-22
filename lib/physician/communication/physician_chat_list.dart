@@ -34,6 +34,7 @@ class _PhysicianChatListState extends ConsumerState<PhysicianChatList> {
         ),
         Expanded(
           child: threadsAsync.when(
+            skipLoadingOnReload: true,
             data: (threads) {
               // Filtering based on participantName (which should be the patient name for physician)
               final filteredThreads = threads
