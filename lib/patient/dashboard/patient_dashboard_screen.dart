@@ -66,6 +66,10 @@ class _DashboardMobileBody extends StatelessWidget {
             _buildHeader(data.patient),
             const SizedBox(height: 24),
             _buildGlucoseCard(data.latestGlucose),
+            if (data.stats != null) ...[
+              const SizedBox(height: 24),
+              _buildStatsCard(data.stats!),
+            ],
             const SizedBox(height: 24),
             _buildNutritionSection(data.recentMeals),
             const SizedBox(height: 24),
@@ -96,7 +100,15 @@ class _DashboardDesktopBody extends StatelessWidget {
               children: [
                 Expanded(
                   flex: 2,
-                  child: _GlucoseMonitoringSection(readings: data.history),
+                  child: Column(
+                    children: [
+                      _GlucoseMonitoringSection(readings: data.history),
+                      if (data.stats != null) ...[
+                        const SizedBox(height: 24),
+                        _buildStatsCard(data.stats!),
+                      ],
+                    ],
+                  ),
                 ),
                 const SizedBox(width: 24),
                 Expanded(
@@ -131,7 +143,7 @@ Widget _buildHeader(Patient? patient) {
 }
 
 Widget _buildGlucoseCard(GlucoseReading? glucose) {
-  if (glucose == null) return const _CozyCard(child: Text("No Data"));
+  if (glucose == null) return const _CozyCard(child: Center(child: Text("No Data")));
 
   return _CozyCard(
     color: AppColors.skyBlue,
@@ -141,7 +153,7 @@ Widget _buildGlucoseCard(GlucoseReading? glucose) {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('BLOOD SUGAR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary)),
+            const Text('LATEST GLUCOSE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary)),
             const SizedBox(height: 8),
             Text(
               (glucose.value / 18.0).toStringAsFixed(1),
@@ -153,6 +165,45 @@ Widget _buildGlucoseCard(GlucoseReading? glucose) {
         _TrendIndicator(trend: glucose.trend ?? ''),
       ],
     ),
+  );
+}
+
+Widget _buildStatsCard(DashboardStats stats) {
+  return _CozyCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('DAILY PROGRESS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary)),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _statItem('${stats.timeInRange.toInt()}%', 'In Range', Colors.green),
+            _statItem('${(stats.averageGlucose / 18.0).toStringAsFixed(1)}', 'Avg mmol/L', AppColors.primary),
+            _statItem('${stats.timeBelowRange.toInt()}%', 'Low', Colors.orange),
+          ],
+        ),
+        const SizedBox(height: 16),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: stats.timeInRange / 100,
+            backgroundColor: AppColors.background,
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+            minHeight: 8,
+          ),
+        )
+      ],
+    ),
+  );
+}
+
+Widget _statItem(String value, String label, Color color) {
+  return Column(
+    children: [
+      Text(value, style: AppTextStyles.headline2.copyWith(color: color)),
+      Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+    ],
   );
 }
 
@@ -203,6 +254,7 @@ class _CozyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: color ?? Colors.white,
@@ -337,33 +389,23 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
                       },
                     ),
                   ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: 4,
-                      reservedSize: 30,
-                      getTitlesWidget: (value, meta) => Text(value.toInt().toString(), style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-                    ),
-                  ),
                 ),
                 borderData: FlBorderData(show: false),
-                minX: minX, maxX: maxX, minY: 0, maxY: 20,
+                minX: minX,
+                maxX: maxX,
+                minY: 0,
+                maxY: 20,
                 lineBarsData: [
                   LineChartBarData(
                     spots: spots,
                     isCurved: true,
-                    curveSmoothness: 0.3,
                     color: AppColors.primary,
                     barWidth: 4,
                     isStrokeCapRound: true,
                     dotData: const FlDotData(show: false),
                     belowBarData: BarAreaData(
-                      show: true, 
-                      gradient: LinearGradient(
-                        colors: [AppColors.primary.withOpacity(0.2), AppColors.primary.withOpacity(0)],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
+                      show: true,
+                      color: AppColors.primary.withOpacity(0.1),
                     ),
                   ),
                 ],
