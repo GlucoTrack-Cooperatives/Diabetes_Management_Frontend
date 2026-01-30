@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 
 class CustomElevatedButton extends StatelessWidget {
   final VoidCallback? onPressed;
@@ -6,6 +8,7 @@ class CustomElevatedButton extends StatelessWidget {
   final Widget? child;
   final double? width;
   final double? height;
+  final Color? color;
 
   const CustomElevatedButton({
     super.key,
@@ -14,36 +17,40 @@ class CustomElevatedButton extends StatelessWidget {
     this.child,
     this.width,
     this.height,
+    this.color,
   }) : assert(text != null || child != null, 'Either text or child must be provided');
 
   @override
   Widget build(BuildContext context) {
-    // 1. Create the button
-    Widget button = ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        // Use minimumSize to enforce height (50 is larger than default)
-        // If width is provided, use it; otherwise allow it to be flexible.
-        minimumSize: Size(width ?? 0, height ?? 60),
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    return Container(
+      width: width,
+      height: height ?? 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: child ?? Text(text!, style: const TextStyle(fontSize: 16).copyWith(color: Colors.black)),
-    );
-
-    // 2. If a specific width is provided, we need to wrap the button
-    // to stop it from stretching if the parent (like a Column) forces it to.
-    if (width != null) {
-      return UnconstrainedBox(
-        child: SizedBox(
-            width: width,
-            height: height ?? 20,
-            child: button
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color ?? AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
         ),
-      );
-    }
-
-    // 3. If no width is provided, return the button directly (it will fill space if parent says so)
-    return button;
+        child: child ??
+            Text(
+              text!,
+              style: AppTextStyles.button,
+            ),
+      ),
+    );
   }
 }

@@ -14,7 +14,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/login/login_controller.dart';
 
-// 1. Convert to ConsumerStatefulWidget to use Riverpod 'ref'
 class PatientMainScreen extends ConsumerStatefulWidget {
   const PatientMainScreen({super.key});
 
@@ -25,15 +24,13 @@ class PatientMainScreen extends ConsumerStatefulWidget {
 class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
   int _selectedIndex = 0;
 
-  // The list of screens to navigate between
   static final List<Widget> _widgetOptions = <Widget>[
-    PatientDashboardScreen(),
-    PatientChatScreen(),
+    const PatientDashboardScreen(),
+    const PatientChatScreen(),
     FoodInsulinLogScreen(),
-    LifestyleTrackerScreen(),
+    const LifestyleTrackerScreen(),
   ];
 
-  // The titles for the AppBar corresponding to each screen
   static const List<String> _widgetTitles = <String>[
     'Dashboard',
     'Chat',
@@ -47,14 +44,9 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
     });
   }
 
-  // LOGOUT FUNCTION
   Future<void> _handleLogout() async {
-    // 1. Trigger the logout logic in the controller (clears token)
     await ref.read(loginControllerProvider.notifier).logout();
-
-    // 2. Check if widget is still mounted before navigating
     if (mounted) {
-      // 3. Navigate back to Login Screen and remove all previous routes
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
             (route) => false,
@@ -75,7 +67,6 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
           icon: const Icon(Icons.sync),
           tooltip: 'Sync Health Data',
           onPressed: () {
-            // Access the provider directly from here
             ref.read(lifestyleControllerProvider.notifier).syncHealthData();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -88,7 +79,7 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
       IconButton(
         icon: const Icon(Icons.settings, color: Colors.grey),
         tooltip: "Settings",
-        onPressed: _navigateToSettings, // Connects to the new screen
+        onPressed: _navigateToSettings,
       ),
       IconButton(
         icon: const Icon(Icons.logout, color: Colors.redAccent),
@@ -101,12 +92,9 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch the chat threads to get the physician's name for the AppBar
     final chatThreads = ref.watch(chatThreadsProvider);
-
     String appBarTitle = _widgetTitles[_selectedIndex];
 
-    // If we are on the Chat screen (index 1), try to get the doctor's name
     if (_selectedIndex == 1) {
       chatThreads.whenData((threads) {
         if (threads.isNotEmpty) {
@@ -116,28 +104,25 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
     }
 
     return ResponsiveLayout(
-      mobileBody: _buildMobileLayout(appBarTitle), // Pass title here
-      desktopBody: _buildDesktopLayout(appBarTitle), // Pass title here
+      mobileBody: _buildMobileLayout(appBarTitle),
+      desktopBody: _buildDesktopLayout(appBarTitle),
     );
   }
 
-  // The mobile layout with a Scaffold and the custom BottomNavigationBar
   Widget _buildMobileLayout(String title) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(title), // Dynamic title
+        title: Text(title),
         actions: _buildAppBarActions(),
       ),
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: PatientBottomNav(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
-        backgroundColor: AppColors.accent,
       ),
     );
   }
 
-  // The desktop layout with a permanent NavigationDrawer
   Widget _buildDesktopLayout(String title) {
     return Scaffold(
       body: Row(
@@ -146,7 +131,7 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
             selectedIndex: _selectedIndex,
             onDestinationSelected: _onItemTapped,
             title: 'Patient Menu',
-            indicatorColor: AppColors.accent,
+            indicatorColor: AppColors.peach,
             destinations: const [
               NavigationDrawerDestination(
                 icon: Icon(Icons.dashboard_outlined),
@@ -174,13 +159,13 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
             Expanded(
               child: Scaffold(
                 appBar: AppBar(
-                  title: Text(title), // Dynamic title
+                  title: Text(title),
                   actions: [
                     ..._buildAppBarActions(),
                     const SizedBox(width: 16),
                   ],
                 ),
-                body: _widgetOptions.elementAt(_selectedIndex), // Removed Center() to allow full width
+                body: _widgetOptions.elementAt(_selectedIndex),
               ),
             ),
         ],
