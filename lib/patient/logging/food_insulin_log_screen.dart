@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:diabetes_management_system/theme/app_colors.dart';
 import 'package:diabetes_management_system/theme/app_text_styles.dart';
 import 'package:diabetes_management_system/utils/responsive_layout.dart';
 import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
@@ -8,17 +9,10 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:diabetes_management_system/models/log_entry_dto.dart';
-import 'package:diabetes_management_system/models/medications_request.dart';
 import 'package:diabetes_management_system/repositories/log_repository.dart';
-
-
-// Services
-import 'package:diabetes_management_system/services/spoonacular_service.dart';
-import 'package:diabetes_management_system/services/open_food_facts_service.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diabetes_management_system/patient/logging/food_log_controller.dart';
-
+import 'package:diabetes_management_system/services/open_food_facts_service.dart';
 
 // --- MAIN SCREEN ---
 class FoodInsulinLogScreen extends StatefulWidget {
@@ -27,12 +21,17 @@ class FoodInsulinLogScreen extends StatefulWidget {
 }
 
 class _FoodInsulinLogScreenState extends State<FoodInsulinLogScreen> {
-
   @override
   Widget build(BuildContext context) {
-    return ResponsiveLayout(
-      mobileBody: _MobileLogBody(),
-      desktopBody: _DesktopLogBody(),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Logging'),
+        elevation: 0,
+      ),
+      body: ResponsiveLayout(
+        mobileBody: _MobileLogBody(),
+        desktopBody: _DesktopLogBody(),
+      ),
     );
   }
 }
@@ -40,35 +39,23 @@ class _FoodInsulinLogScreenState extends State<FoodInsulinLogScreen> {
 // --- RESPONSIVE LAYOUTS ---
 
 class _MobileLogBody extends StatelessWidget {
-
   const _MobileLogBody();
 
   @override
   Widget build(BuildContext context) {
-    // FIX: Remove SingleChildScrollView.
-    // Use a Column with Expanded to split the screen vertically.
     return Column(
       children: [
-        // 1. Input Section (Takes 70% of screen)
-        // This allows the inner TabBarView to function correctly.
-        // The _MealLogView inside it handles its own scrolling if content is long.
         const Expanded(
-            flex: 7,
+            flex: 6,
             child: _LogInputSection()
         ),
-
-        // Visual Separator
-        Divider(height: 1, thickness: 1, color: Colors.grey[300]),
-
-        // 2. Recent Logs (Takes 30% of screen)
-        // We wrap this in a container or Expanded so the list has a fixed area
-        // at the bottom to scroll within.
+        Container(
+          height: 8,
+          color: AppColors.background,
+        ),
         const Expanded(
-            flex: 3,
-            child: Padding(
-              padding: EdgeInsets.only(top: 8.0),
-              child: _RecentLogsList(),
-            )
+            flex: 4,
+            child: _RecentLogsSection(),
         ),
       ],
     );
@@ -76,7 +63,6 @@ class _MobileLogBody extends StatelessWidget {
 }
 
 class _DesktopLogBody extends StatelessWidget {
-
   const _DesktopLogBody();
 
   @override
@@ -86,9 +72,9 @@ class _DesktopLogBody extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(flex: 2, child: _LogInputSection()),
-          SizedBox(width: 24),
-          Expanded(flex: 1, child: _RecentLogsList()),
+          Expanded(flex: 3, child: _LogInputSection()),
+          SizedBox(width: 32),
+          Expanded(flex: 2, child: _RecentLogsSection()),
         ],
       ),
     );
@@ -98,7 +84,6 @@ class _DesktopLogBody extends StatelessWidget {
 // --- INPUT SECTION ---
 
 class _LogInputSection extends StatefulWidget {
-
   const _LogInputSection();
 
   @override
@@ -116,26 +101,38 @@ class __LogInputSectionState extends State<_LogInputSection> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    // 1. Remove SingleChildScrollView.
-    // We want the Column to fill the screen height exactly.
     return Column(
       children: [
-        TabBar(
-          controller: _tabController,
-          labelColor: Colors.black,
-          unselectedLabelColor: Colors.grey,
-          tabs: [Tab(text: 'Meal Log'), Tab(text: 'Insulin Log')],
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Container(
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 10)],
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                color: AppColors.primary,
+              ),
+              labelColor: Colors.white,
+              unselectedLabelColor: AppColors.textSecondary,
+              labelStyle: AppTextStyles.bodyText1.copyWith(fontWeight: FontWeight.bold),
+              indicatorSize: TabBarIndicatorSize.tab,
+              tabs: [
+                Tab(text: 'Meal Log'),
+                Tab(text: 'Insulin Log'),
+              ],
+            ),
+          ),
         ),
-        SizedBox(height: 16),
-
-        // 2. Use Expanded instead of SizedBox
-        // This tells TabBarView: "Take up all the remaining screen space below the tabs"
         Expanded(
           child: TabBarView(
             controller: _tabController,
             children: [
-              // 3. Make sure these widgets handle their own scrolling!
-              // (e.g., they should return a ListView or SingleChildScrollView)
               _MealLogView(),
               _InsulinLogView(),
             ],
@@ -146,7 +143,7 @@ class __LogInputSectionState extends State<_LogInputSection> with SingleTickerPr
   }
 }
 
-// --- MEAL LOG VIEW (HANDLES PHOTOS & BARCODES) ---
+// --- MEAL LOG VIEW ---
 
 class _MealLogView extends ConsumerStatefulWidget {
   const _MealLogView();
@@ -156,18 +153,13 @@ class _MealLogView extends ConsumerStatefulWidget {
 }
 
 class _MealLogViewState extends ConsumerState<_MealLogView> {
-  // Controllers
   final TextEditingController _descController = TextEditingController();
   final TextEditingController _carbsController = TextEditingController();
   final TextEditingController _caloriesController = TextEditingController();
   final TextEditingController _barcodeInputController = TextEditingController();
 
-  // State (UI specific)
   bool _isBarcodeMode = false;
-  // bool _isLoading = false; // <-- REMOVED: Managed by Controller now
   XFile? _imageFile;
-
-  // Services
   final ImagePicker _picker = ImagePicker();
   final OpenFoodFactsService _openFoodService = OpenFoodFactsService();
 
@@ -185,48 +177,37 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
   }
 
   Future<void> _analyzeData() async {
-    // 1. Validation
     if (!_isBarcodeMode && _imageFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please take a photo first.")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please provide a photo.")));
       return;
     }
     if (_isBarcodeMode && _barcodeInputController.text.isEmpty && _imageFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please enter a barcode.")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please enter a barcode or scan it.")));
       return;
     }
 
-    // 2. Execution
     if (_isBarcodeMode) {
-      // --- BARCODE MODE (Keep Local Logic) ---
       try {
         String codeToSearch = _barcodeInputController.text;
-        if (codeToSearch.isEmpty) codeToSearch = "5900001001001"; // Demo fallback
-
         final result = await _openFoodService.getProductFromBarcode(codeToSearch);
-
         if (result != null) {
           setState(() {
             _descController.text = result['description'] ?? '';
             _carbsController.text = result['carbs']?.toString() ?? '';
             _caloriesController.text = result['calories']?.toString() ?? '';
           });
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Found: ${result['description']}")));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Product not found.")));
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Barcode Error: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
       }
-
     } else {
-      // --- AI CAMERA MODE (Use Riverpod Controller) ---
-      // We just call the function. The UI update happens in ref.listen below.
       ref.read(foodLogControllerProvider.notifier).analyzeImage(_imageFile!);
     }
   }
 
   void _submitLog() {
-    // We just pass the raw text to the controller. The controller handles validation & API.
     ref.read(foodLogControllerProvider.notifier).submitLog(
       description: _descController.text,
       carbsStr: _carbsController.text,
@@ -236,186 +217,207 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Listen to the Controller State
     ref.listen<FoodLogState>(foodLogControllerProvider, (previous, next) {
-      // Case 1: AI Analysis Finished Successfully
       if (next is FoodAnalysisSuccess) {
         _descController.text = next.description;
         _carbsController.text = next.carbs;
         _caloriesController.text = next.calories;
-
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Food Identified: ${next.description}"),
-          backgroundColor: Colors.green,
-        ));
-      }
-
-      // Case 2: Log Saved to Database Successfully
-      else if (next is FoodLogSuccess) {
+      } else if (next is FoodLogSuccess) {
         _descController.clear();
         _carbsController.clear();
         _caloriesController.clear();
         _barcodeInputController.clear();
         setState(() => _imageFile = null);
-
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Meal Logged Successfully!")));
-
-        // Reset controller state so we don't trigger success again accidentally
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Meal Logged!"), backgroundColor: Colors.green));
         ref.read(foodLogControllerProvider.notifier).resetState();
-      }
-      else if (next is FoodLogError) {
-        // Error Logic
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(next.message),
-          backgroundColor: Colors.red,
-        ));
+      } else if (next is FoodLogError) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next.message), backgroundColor: Colors.red));
       }
     });
 
-    // 2. Watch the state to handle Loading UI
     final state = ref.watch(foodLogControllerProvider);
     final bool isLoading = state is FoodLogLoading || state is FoodAnalysisLoading;
 
     return SingleChildScrollView(
+      padding: EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. MODE TOGGLE
-          Container(
-            margin: EdgeInsets.symmetric(vertical: 12),
-            padding: EdgeInsets.all(4),
-            decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(8)),
-            child: Row(
-              children: [
-                Expanded(child: _buildModeButton("AI Food Camera", false)),
-                Expanded(child: _buildModeButton("Barcode Scanner", true)),
-              ],
-            ),
-          ),
-
-          // 2. IMAGE PREVIEW (Shows for both modes)
-          if (_imageFile != null)
-            Stack(
-              alignment: Alignment.topRight,
-              children: [
-                Container(
-                  width: double.infinity,
-                  margin: EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey[100],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: kIsWeb
-                        ? Image.network(_imageFile!.path, fit: BoxFit.cover)
-                        : Image.file(File(_imageFile!.path), fit: BoxFit.cover),
-                  ),
-                ),
-                IconButton(
-                  icon: CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.close, size: 20)),
-                  onPressed: () => setState(() => _imageFile = null),
-                )
-              ],
-            ),
-
-          // 3. MEDIA BUTTONS
-          Row(children: [
-            Expanded(
-                child: OutlinedButton.icon(
-                    onPressed: () => _pickImage(ImageSource.gallery),
-                    icon: Icon(Icons.photo_library),
-                    label: Text('Gallery' , style: TextStyle(color: Colors.black))
-                )
-            ),
-            SizedBox(width: 16),
-            Expanded(
-                child: OutlinedButton.icon(
-                    onPressed: () => _pickImage(ImageSource.camera),
-                    icon: Icon(Icons.camera_alt_outlined),
-                    label: Text('Camera', style: TextStyle(color: Colors.black))
-                )
-            ),
-          ]),
-
+          // Mode Selection
+          _buildModeSelector(),
           SizedBox(height: 16),
 
-          // 4. MANUAL BARCODE INPUT (Only visible in Barcode Mode)
-          if (_isBarcodeMode)
-            Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: CustomTextFormField(
-                        labelText: 'Enter Barcode Manually',
-                        controller: _barcodeInputController,
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    // Small hint text
-                    Tooltip(
-                      message: "Type the numbers under the barcode",
-                      child: Icon(Icons.help_outline, color: Colors.grey),
-                    )
-                  ],
-                ),
-                SizedBox(height: 16),
-              ],
-            ),
+          // Media Section
+          _buildMediaCard(isLoading),
+          SizedBox(height: 20),
 
-          // 5. ACTION BUTTON (Calls API)
-          CustomElevatedButton(
-            onPressed: isLoading ? () {} : _analyzeData,
-            height: 50.0,
-            // Show a spinner inside the button if loading
-            child: isLoading
-                ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : Text(_isBarcodeMode ? "Search Barcode" : "Identify Food"),
+          // Barcode Manual Entry
+          if (_isBarcodeMode) ...[
+            CustomTextFormField(
+              labelText: 'Manual Barcode',
+              controller: _barcodeInputController,
+              keyboardType: TextInputType.number,
+            ),
+            SizedBox(height: 16),
+          ],
+
+          // Analysis Results Card
+          Card(
+            margin: EdgeInsets.zero,
+            elevation: 0,
+            color: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: BorderSide(color: AppColors.border.withOpacity(0.5))),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Meal Details", style: AppTextStyles.headline2.copyWith(fontSize: 18)),
+                  SizedBox(height: 16),
+                  CustomTextFormField(labelText: 'Description', controller: _descController),
+                  SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: CustomTextFormField(labelText: 'Carbs (g)', controller: _carbsController, keyboardType: TextInputType.number)),
+                      SizedBox(width: 12),
+                      Expanded(child: CustomTextFormField(labelText: 'Calories', controller: _caloriesController, keyboardType: TextInputType.number)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
 
           SizedBox(height: 24),
-
-          // 6. RESULT FIELDS
-          CustomTextFormField(labelText: 'Description', controller: _descController),
-          SizedBox(height: 16),
-          CustomTextFormField(labelText: 'Carbs (g)', controller: _carbsController, keyboardType: TextInputType.number),
-          SizedBox(height: 16),
-          CustomTextFormField(labelText: 'Calories', controller: _caloriesController, keyboardType: TextInputType.number),
-
-          SizedBox(height: 24),
           CustomElevatedButton(
-              onPressed: _submitLog,
-              text: 'Log Meal',
-              height: 50.0
+              onPressed: isLoading ? null : _submitLog,
+              text: 'Save Meal Log',
+              height: 56.0
           ),
+          SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  Widget _buildModeButton(String title, bool isBarcode) {
-    bool isActive = _isBarcodeMode == isBarcode;
+  Widget _buildModeSelector() {
+    return Container(
+      padding: EdgeInsets.all(4),
+      decoration: BoxDecoration(color: AppColors.border.withOpacity(0.3), borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          _modeButton("AI Camera", !_isBarcodeMode, Icons.auto_awesome),
+          _modeButton("Barcode", _isBarcodeMode, Icons.qr_code_scanner),
+        ],
+      ),
+    );
+  }
+
+  Widget _modeButton(String title, bool active, IconData icon) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() {
+          _isBarcodeMode = (title == "Barcode");
+          _imageFile = null;
+        }),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: active ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: active ? [BoxShadow(color: AppColors.shadow, blurRadius: 4)] : [],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: active ? AppColors.primary : AppColors.textSecondary),
+              SizedBox(width: 8),
+              Text(title, style: TextStyle(fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? AppColors.textPrimary : AppColors.textSecondary)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMediaCard(bool isLoading) {
+    return Column(
+      children: [
+        if (_imageFile == null)
+          Container(
+            height: 160,
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.border, width: 2),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _mediaOption(Icons.camera_alt_rounded, "Camera", () => _pickImage(ImageSource.camera)),
+                Container(width: 1, height: 80, color: AppColors.border),
+                _mediaOption(Icons.photo_library_rounded, "Gallery", () => _pickImage(ImageSource.gallery)),
+              ],
+            ),
+          )
+        else
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Container(
+                  height: 220,
+                  width: double.infinity,
+                  child: kIsWeb ? Image.network(_imageFile!.path, fit: BoxFit.cover) : Image.file(File(_imageFile!.path), fit: BoxFit.cover),
+                ),
+              ),
+              Positioned(
+                top: 12, right: 12,
+                child: IconButton(
+                  icon: CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.close, size: 20, color: Colors.red)),
+                  onPressed: () => setState(() => _imageFile = null),
+                ),
+              ),
+              if (isLoading)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(24)),
+                    child: Center(child: CircularProgressIndicator(color: Colors.white)),
+                  ),
+                ),
+            ],
+          ),
+        if (_imageFile != null && !isLoading)
+          Padding(
+            padding: const EdgeInsets.only(top: 12.0),
+            child: CustomElevatedButton(
+              onPressed: _analyzeData,
+              text: _isBarcodeMode ? "Scan Barcode" : "Identify Food",
+              color: AppColors.primary,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _mediaOption(IconData icon, String label, VoidCallback onTap) {
     return GestureDetector(
-      onTap: () => setState(() {
-        _isBarcodeMode = isBarcode;
-        _imageFile = null;
-        _barcodeInputController.clear();
-      }),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          boxShadow: isActive ? [BoxShadow(color: Colors.black12, blurRadius: 4)] : [],
-        ),
-        child: Center(
-          child: Text(title, style: TextStyle(
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              color: isActive ? Colors.black : Colors.grey[600]
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircleAvatar(
+            radius: 28, 
+            backgroundColor: AppColors.primary.withOpacity(0.1), 
+            child: Icon(icon, size: 28, color: AppColors.primary)
+          ),
+          SizedBox(height: 10),
+          Text(label, style: AppTextStyles.bodyText1.copyWith(
+            fontWeight: FontWeight.w600, 
+            color: AppColors.textPrimary,
+            fontSize: 14
           )),
-        ),
+        ],
       ),
     );
   }
@@ -431,103 +433,94 @@ class _InsulinLogView extends ConsumerStatefulWidget {
 
 class _InsulinLogViewState extends ConsumerState<_InsulinLogView> {
   final TextEditingController _doseController = TextEditingController();
-
   String? _selectedName;
   String? _selectedId;
 
   void _submitDose() {
     if (_selectedId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please select a medication")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please select medication")));
       return;
     }
-
-    // Call the controller
     ref.read(foodLogControllerProvider.notifier).submitInsulin(
-      medicationId: _selectedId!,
-      medicationName: _selectedName!,
-      unitsStr: _doseController.text,
+      medicationId: _selectedId!, medicationName: _selectedName!, unitsStr: _doseController.text,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // 1. Listen for Success/Error (reusing the same controller state as Food)
     ref.listen<FoodLogState>(foodLogControllerProvider, (previous, next) {
       if (next is FoodLogSuccess) {
         _doseController.clear();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Insulin Logged: ${next.message}"),
-          backgroundColor: Colors.green,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Insulin Logged!"), backgroundColor: Colors.green));
         ref.read(foodLogControllerProvider.notifier).resetState();
-      } else if (next is FoodLogError) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(next.message),
-          backgroundColor: Colors.red,
-        ));
       }
     });
 
-    final state = ref.watch(foodLogControllerProvider);
-    final bool isLoading = state is FoodLogLoading;
-
     final medicationsAsync = ref.watch(medicationsProvider);
+    final state = ref.watch(foodLogControllerProvider);
 
     return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 1. BRAND DROPDOWN (Async)
-          medicationsAsync.when(
-            loading: () => Center(child: CircularProgressIndicator()),
-            error: (err, stack) => Text('Error loading medications: $err', style: TextStyle(color: Colors.red)),
-            data: (medications) {
-              return DropdownButtonFormField<String>(
-                value: _selectedId,
-                isExpanded: true,
-                items: medications.map((med) {
-                  return DropdownMenuItem<String>(
-                    value: med.id,
-                    child: Text(med.name, overflow: TextOverflow.ellipsis),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  setState(() {
-                    _selectedId = val;
-                    _selectedName = medications.firstWhere((m) => m.id == val).name;
-                  });
-                },
-                decoration: InputDecoration(
-                    labelText: 'Insulin Type',
-                    border: OutlineInputBorder()
+      padding: EdgeInsets.all(16),
+      child: Card(
+        elevation: 0,
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text("Log Insulin Dose", style: AppTextStyles.headline2),
+              SizedBox(height: 20),
+              medicationsAsync.when(
+                loading: () => Center(child: CircularProgressIndicator()),
+                error: (err, _) => Text('Error loading meds'),
+                data: (meds) => DropdownButtonFormField<String>(
+                  value: _selectedId,
+                  decoration: InputDecoration(labelText: 'Insulin Type', border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))),
+                  items: meds.map((m) => DropdownMenuItem(value: m.id, child: Text(m.name))).toList(),
+                  onChanged: (v) => setState(() { _selectedId = v; _selectedName = meds.firstWhere((m) => m.id == v).name; }),
                 ),
-              );
-            },
+              ),
+              SizedBox(height: 16),
+              CustomTextFormField(labelText: 'Dose (Units)', controller: _doseController, keyboardType: TextInputType.numberWithOptions(decimal: true)),
+              SizedBox(height: 24),
+              CustomElevatedButton(onPressed: state is FoodLogLoading ? null : _submitDose, text: 'Log Dose'),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+}
 
+// --- RECENT LOGS SECTION ---
+class _RecentLogsSection extends StatelessWidget {
+  const _RecentLogsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: EdgeInsets.fromLTRB(16, 20, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Recent Activity', style: AppTextStyles.headline2),
+              Icon(Icons.history, color: AppColors.textSecondary),
+            ],
+          ),
           SizedBox(height: 16),
-
-          // 2. DOSE INPUT
-          CustomTextFormField(
-            labelText: 'Dose (Units)',
-            controller: _doseController,
-            keyboardType: TextInputType.numberWithOptions(decimal: true),
-          ),
-
-          SizedBox(height: 16),
-
-          // 3. SUBMIT BUTTON
-          CustomElevatedButton(
-              onPressed: isLoading ? () {} : _submitDose,
-              text: isLoading ? 'Saving...' : 'Log Dose'
-          ),
+          const Expanded(child: _RecentLogsList()),
         ],
       ),
     );
   }
 }
 
-// --- RECENT LOGS LIST
 class _RecentLogsList extends ConsumerWidget {
   const _RecentLogsList();
 
@@ -535,53 +528,47 @@ class _RecentLogsList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final logsAsyncValue = ref.watch(recentLogsProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Recent Logs', style: AppTextStyles.headline2),
-        SizedBox(height: 12),
+    return logsAsyncValue.when(
+      loading: () => Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(child: Text('Error loading logs')),
+      data: (logs) {
+        if (logs.isEmpty) return Center(child: Text("No logs yet today."));
 
-        logsAsyncValue.when(
-          loading: () => Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Text('Error: $err', style: TextStyle(color: Colors.red)),
-          data: (logs) {
-            if (logs.isEmpty) return Text("No recent logs found.");
-
+        return ListView.builder(
+          itemCount: logs.length,
+          itemBuilder: (context, index) {
+            final log = logs[index];
+            final bool isInsulin = log.type == 'Insulin';
             return Card(
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                itemCount: logs.length,
-                itemBuilder: (context, index) {
-                  final log = logs[index];
-                  final timeStr = DateFormat('h:mm a').format(log.timestamp);
-
-                  // Logic to check if the description already has "Carbs" text to avoid duplication
-                  // (Assuming backend might send "45g Carbs" or just "45")
-
-                  return ListTile(
-                    leading: Icon(
-                      log.type == 'Insulin' ? Icons.medication : Icons.restaurant,
-                      color: log.type == 'Insulin' ? Colors.blue : Colors.green,
-                    ),
-                    title: Text(
-                      log.description, // Backend sends "45g Carbs" based on your previous java code
-                      style: AppTextStyles.bodyText1,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(
-                      timeStr, // Just the time, removed the type
-                      style: AppTextStyles.bodyText2.copyWith(color: Colors.grey),
-                    ),
-                  );
-                },
-                separatorBuilder: (context, index) => Divider(height: 1),
+              margin: EdgeInsets.only(bottom: 12),
+              elevation: 0,
+              color: isInsulin ? AppColors.skyBlue : AppColors.mint,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.black.withOpacity(0.02))
+              ),
+              child: ListTile(
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                leading: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12)
+                  ),
+                  child: Icon(
+                    isInsulin ? Icons.medication_rounded : Icons.restaurant_rounded, 
+                    color: isInsulin ? Color(0xFF42A5F5) : Color(0xFF66BB6A), 
+                    size: 22
+                  ),
+                ),
+                title: Text(log.description, style: AppTextStyles.bodyText1.copyWith(fontWeight: FontWeight.w600, fontSize: 15)),
+                subtitle: Text(DateFormat('h:mm a').format(log.timestamp), style: AppTextStyles.bodyText2),
+                trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary.withOpacity(0.5)),
               ),
             );
           },
-        ),
-      ],
+        );
+      },
     );
   }
 }

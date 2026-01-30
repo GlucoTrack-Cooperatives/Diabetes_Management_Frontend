@@ -77,12 +77,10 @@ class _PhysicianMainScreenState extends ConsumerState<PhysicianMainScreen> {
           ),
         ],
       ),
-      // Removed Center() to allow the list/dashboard to use full width
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: PhysicianBottomNav(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
-        backgroundColor: AppColors.accent,
       ),
     );
   }
@@ -95,7 +93,6 @@ class _PhysicianMainScreenState extends ConsumerState<PhysicianMainScreen> {
             selectedIndex: _selectedIndex,
             onDestinationSelected: _onItemTapped,
             title: 'Physician Menu',
-            indicatorColor: AppColors.accent,
             destinations: const [
               NavigationDrawerDestination(
                 icon: Icon(Icons.people_alt_outlined),
@@ -133,7 +130,6 @@ class _PhysicianMainScreenState extends ConsumerState<PhysicianMainScreen> {
                   const SizedBox(width: 16),
                 ],
               ),
-              // Fixed the syntax error here: 'body' instead of 'child' outside the widget
               body: _widgetOptions.elementAt(_selectedIndex),
             ),
           ),
