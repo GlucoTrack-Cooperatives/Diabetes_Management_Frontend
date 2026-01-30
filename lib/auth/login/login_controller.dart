@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../repositories/auth_repository.dart';
-import '../../models/login_request.dart';
-import '../../services/secure_storage_service.dart';
-import '../../services/fcm_service.dart';
+import 'package:diabetes_management_system/repositories/auth_repository.dart';
+import 'package:diabetes_management_system/models/login_request.dart';
+import 'package:diabetes_management_system/services/secure_storage_service.dart';
+import 'package:diabetes_management_system/services/fcm_service.dart';
 
 
 // StateNotifierProvider exposing AsyncValue<void>
