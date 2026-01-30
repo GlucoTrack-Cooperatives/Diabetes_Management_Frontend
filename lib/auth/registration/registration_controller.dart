@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../repositories/auth_repository.dart';
-import '../../models/patient_registration_request.dart';
-import '../../models/physician_registration_request.dart';
+import 'package:diabetes_management_system/models/patient_registration_request.dart';
+import 'package:diabetes_management_system/models/physician_registration_request.dart';
+import 'package:diabetes_management_system/repositories/auth_repository.dart';
 
 final registrationControllerProvider = StateNotifierProvider<RegistrationController, AsyncValue<void>>((ref) {
   return RegistrationController(ref.watch(authRepositoryProvider));

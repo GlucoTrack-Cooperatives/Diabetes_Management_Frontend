@@ -2,9 +2,9 @@ import 'package:diabetes_management_system/auth/login/login_controller.dart';
 import 'package:diabetes_management_system/patient/patient_main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../models/patient_registration_request.dart';
+import 'package:diabetes_management_system/models/patient_registration_request.dart';
 import 'registration_controller.dart';
-import '../../../theme/app_text_styles.dart';
+import 'package:diabetes_management_system/theme/app_text_styles.dart';
 
 // Convert to ConsumerWidget to access Riverpod providers
 class PatientRegistrationScreen extends ConsumerWidget {
