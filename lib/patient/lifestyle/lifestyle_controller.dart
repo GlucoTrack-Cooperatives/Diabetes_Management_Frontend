@@ -51,8 +51,13 @@ class LifestyleController extends StateNotifier<LifestyleData> {
     syncHealthData();
   }
 
-  void addWater() {
-    state = state.copyWith(waterGlasses: state.waterGlasses + 1);
+  void addWater() async {
+    // 1. Write to Health API (assuming 1 glass = 0.25 Liters)
+    final success = await _healthService.writeWater(0.25, DateTime.now());
+    if (success) {
+      // 2. Refresh data to show the update
+      await syncHealthData();
+    }
   }
 
   void resetWater() {
@@ -79,7 +84,11 @@ class LifestyleController extends StateNotifier<LifestyleData> {
 
       final steps = await _healthService.getTotalStepsForDay(now);
       final caloriePoints = await _healthService.getTotalEnergyData(caloriesStart, now);
-      
+
+      final waterLiters = await _healthService.getTotalWaterLiters(startOfDay, now);
+      // Convert Liters back to glasses for the UI (0.25L = 1 glass)
+      final glasses = (waterLiters / 0.25).round();
+
       final todayCalories = caloriePoints.where((point) {
         final pointDate = point.timestamp.toLocal();
         return pointDate.year == now.year && pointDate.month == now.month && pointDate.day == now.day;
@@ -100,6 +109,7 @@ class LifestyleController extends StateNotifier<LifestyleData> {
         activeCalories: totalCalories,
         sleepDuration: Duration(minutes: totalSleepMinutes.toInt()),
         weight: latestWeight,
+        waterGlasses: glasses,
         isLoading: false,
       );
     } catch (e) {

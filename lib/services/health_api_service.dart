@@ -170,6 +170,45 @@ class HealthApiService {
     }
   }
 
+  // Add to HealthApiService class
+
+  /// Write water intake (1 glass ≈ 250ml or 0.25L)
+  Future<bool> writeWater(double liters, DateTime timestamp) async {
+    try {
+      return await _health.writeHealthData(
+        value: liters,
+        type: HealthDataType.WATER,
+        startTime: timestamp,
+        endTime: timestamp,
+        unit: HealthDataUnit.LITER,
+      );
+    } catch (e) {
+      print('Error writing water data: $e');
+      return false;
+    }
+  }
+
+  /// Fetch total water intake for the day in Liters
+  Future<double> getTotalWaterLiters(DateTime startTime, DateTime endTime) async {
+    try {
+      final healthData = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.WATER],
+        startTime: startTime,
+        endTime: endTime,
+      );
+
+      double totalLiters = 0.0;
+      for (var point in healthData) {
+        final value = _extractNumericValue(point);
+        if (value != null) totalLiters += value;
+      }
+      return totalLiters;
+    } catch (e) {
+      print('Error fetching water: $e');
+      return 0.0;
+    }
+  }
+
   /// Write blood glucose data to health store
   Future<bool> writeBloodGlucose(double value, DateTime timestamp) async {
     try {
