@@ -31,6 +31,14 @@ class AlertSettingsController {
       print('Error loading settings: $e');
     }
   }
+  /// Update display unit preference
+  Future<void> updateDisplayUnit(GlucoseUnit unit) async {
+    final currentSettings = _ref.read(alertSettingsProvider);
+    final updatedSettings = currentSettings.copyWith(displayUnit: unit);
+
+    await _repository.saveSettings(updatedSettings);
+    _ref.read(alertSettingsProvider.notifier).state = updatedSettings;
+  }
 
   /// Update threshold values
   Future<void> updateThresholds({

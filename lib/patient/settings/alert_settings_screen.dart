@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'alert_settings_controller.dart';
+import '../../models/glucose_alert_settings.dart';
 
 /// Screen for configuring glucose alert settings
 class AlertSettingsScreen extends ConsumerStatefulWidget {
@@ -158,7 +159,7 @@ class _AlertSettingsScreenState extends ConsumerState<AlertSettingsScreen> {
 
             // Threshold settings
             Text(
-              'Alert Thresholds (mg/dL)',
+              'Alert Thresholds (${settings.displayUnit.displayName})',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -202,6 +203,72 @@ class _AlertSettingsScreenState extends ConsumerState<AlertSettingsScreen> {
               icon: Icons.warning_amber,
             ),
             const SizedBox(height: 24),
+
+            // Unit preference
+            Text(
+              'Display Unit',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Choose how glucose values are displayed',
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 16),
+                    SegmentedButton<GlucoseUnit>(
+                      segments: const [
+                        ButtonSegment(
+                          value: GlucoseUnit.mgdL,
+                          label: Text('mg/dL'),
+                          icon: Icon(Icons.science),
+                        ),
+                        ButtonSegment(
+                          value: GlucoseUnit.mmolL,
+                          label: Text('mmol/L'),
+                          icon: Icon(Icons.water_drop),
+                        ),
+                      ],
+                      selected: {settings.displayUnit},
+                      onSelectionChanged: (Set<GlucoseUnit> newSelection) {
+                        controller.updateDisplayUnit(newSelection.first);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, size: 20, color: Colors.blue.shade700),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'All data is stored in mg/dL (Dexcom standard). This only changes display.',
+                              style: TextStyle(fontSize: 12, color: Colors.blue.shade700),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+            const Divider(),
+          
+
 
             const Divider(),
             const SizedBox(height: 16),
@@ -302,6 +369,7 @@ class _AlertSettingsScreenState extends ConsumerState<AlertSettingsScreen> {
   }
 
   Widget _buildAlertPreview(String label, double value, Color color) {
+    final settings = ref.watch(alertSettingsProvider);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -330,7 +398,7 @@ class _AlertSettingsScreenState extends ConsumerState<AlertSettingsScreen> {
             ),
           ),
           Text(
-            '${value.toStringAsFixed(0)} mg/dL',
+            '${settings.displayUnit.formatValue(value)} ${settings.displayUnit.displayName}',
             style: TextStyle(
               fontWeight: FontWeight.w500,
               color: color,

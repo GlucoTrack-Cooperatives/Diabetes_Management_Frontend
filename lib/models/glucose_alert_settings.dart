@@ -1,4 +1,39 @@
 /// Model for glucose alert settings
+enum GlucoseUnit {
+  mgdL, // Dexcom default
+  mmolL, // Convert only for display as we use only Dexcom
+}
+
+extension GlucoseUnitExtension on GlucoseUnit {
+  String get displayName {
+    switch (this) {
+      case GlucoseUnit.mgdL:
+        return 'mg/dL';
+      case GlucoseUnit.mmolL:
+        return 'mmol/L';
+    }
+  }
+  
+  double convertFromMgdL(double mgdLValue) {
+    switch (this) {
+      case GlucoseUnit.mgdL:
+        return mgdLValue;
+      case GlucoseUnit.mmolL:
+        return mgdLValue / 18.0;
+    }
+  }
+  
+  String formatValue(double mgdLValue) {
+    final converted = convertFromMgdL(mgdLValue);
+    switch (this) {
+      case GlucoseUnit.mgdL:
+        return converted.toStringAsFixed(0);
+      case GlucoseUnit.mmolL:
+        return converted.toStringAsFixed(1);
+    }
+  }
+}
+
 class GlucoseAlertSettings {
   final double lowThreshold;
   final double highThreshold;
@@ -8,6 +43,7 @@ class GlucoseAlertSettings {
   final bool notificationsEnabled;
   final bool lowAlertMandatory; // Low threshold alert cannot be disabled
   final bool highAlertMandatory; // High threshold alert cannot be disabled
+  final GlucoseUnit displayUnit;
 
   GlucoseAlertSettings({
     this.lowThreshold = 70.0, // mg/dL
@@ -18,6 +54,7 @@ class GlucoseAlertSettings {
     this.notificationsEnabled = true,
     this.lowAlertMandatory = true,
     this.highAlertMandatory = true,
+    this.displayUnit = GlucoseUnit.mgdL,
   });
 
   GlucoseAlertSettings copyWith({
@@ -29,6 +66,7 @@ class GlucoseAlertSettings {
     bool? notificationsEnabled,
     bool? lowAlertMandatory,
     bool? highAlertMandatory,
+    GlucoseUnit? displayUnit,
   }) {
     return GlucoseAlertSettings(
       lowThreshold: lowThreshold ?? this.lowThreshold,
@@ -39,6 +77,7 @@ class GlucoseAlertSettings {
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       lowAlertMandatory: lowAlertMandatory ?? this.lowAlertMandatory,
       highAlertMandatory: highAlertMandatory ?? this.highAlertMandatory,
+      displayUnit: displayUnit ?? this.displayUnit,
     );
   }
 
@@ -51,6 +90,7 @@ class GlucoseAlertSettings {
         'notificationsEnabled': notificationsEnabled,
         'lowAlertMandatory': lowAlertMandatory,
         'highAlertMandatory': highAlertMandatory,
+        'displayUnit': displayUnit.name,
       };
 
   factory GlucoseAlertSettings.fromJson(Map<String, dynamic> json) =>
@@ -63,6 +103,10 @@ class GlucoseAlertSettings {
         notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
         lowAlertMandatory: json['lowAlertMandatory'] as bool? ?? true,
         highAlertMandatory: json['highAlertMandatory'] as bool? ?? true,
+        displayUnit: GlucoseUnit.values.firstWhere( 
+          (e) => e.name == json['displayUnit'],
+          orElse: () => GlucoseUnit.mgdL,
+        ),
       );
 
   @override
@@ -126,3 +170,4 @@ extension AlertSeverityExtension on AlertSeverity {
     }
   }
 }
+
