@@ -149,10 +149,10 @@ class _PatientRegistrationFormState extends ConsumerState<_PatientRegistrationFo
           _buildTextField('Phone Number', _phoneController, type: TextInputType.phone),
           const SizedBox(height: 16),
 
-          _buildTextField('Date of Birth (YYYY-MM-DD)', _dobController, type: TextInputType.datetime),
+          _buildDateField('Date of Birth', _dobController),
           const SizedBox(height: 16),
 
-          _buildTextField('Diagnosis Date (YYYY-MM-DD)', _diagnosisDateController, type: TextInputType.datetime),
+          _buildDateField('Diagnosis Date', _diagnosisDateController),
           const SizedBox(height: 16),
 
           _buildTextField('Emergency Contact Phone', _emergencyController, type: TextInputType.phone),
@@ -196,4 +196,36 @@ class _PatientRegistrationFormState extends ConsumerState<_PatientRegistrationFo
       },
     );
   }
+  Widget _buildDateField(String label, TextEditingController controller) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        suffixIcon: const Icon(Icons.calendar_today),
+      ),
+      readOnly: true,
+      onTap: () async {
+        final DateTime? pickedDate = await showDatePicker(
+          context: context,
+          initialDate: DateTime.now(),
+          firstDate: DateTime(1900),
+          lastDate: DateTime.now(),
+        );
+        
+        if (pickedDate != null) {
+          final formattedDate = "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+          controller.text = formattedDate;
+        }
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please select $label';
+        }
+        return null;
+      },
+    );
+  }
+  
 }
+

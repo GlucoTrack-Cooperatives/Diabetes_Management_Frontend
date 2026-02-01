@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/patient_profile.dart';
 import '../../repositories/dashboard_repository.dart';
 import '../../models/dashboard_models.dart';
+import '../../services/health_api_service.dart';
+import 'package:health/health.dart';
 
 class DashboardState {
   final GlucoseReading? latestGlucose;
@@ -21,18 +23,41 @@ class DashboardState {
 }
 
 final dashboardControllerProvider = StateNotifierProvider<DashboardController, AsyncValue<DashboardState>>((ref) {
-  final controller = DashboardController(ref.watch(dashboardRepositoryProvider));
+  final controller = DashboardController(
+    ref.watch(dashboardRepositoryProvider),
+    ref.watch(healthApiServiceProvider),
+  );
   ref.onDispose(() => controller.dispose());
   return controller;
 });
 
 class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
   final DashboardRepository _repository;
+  final HealthApiService _healthService;
   Timer? _refreshTimer;
 
-  DashboardController(this._repository) : super(const AsyncValue.loading()) {
+  DashboardController(this._repository, this._healthService) : super(const AsyncValue.loading()) {
     refreshData();
     _startPolling();
+  }
+
+  Future<void> _syncGlucoseToHealth(List<GlucoseReading> readings) async {
+    try {
+      for (final reading in readings) {
+        final success = await _healthService.writeBloodGlucose(
+          reading.value,
+          reading.timestamp,
+        );
+        if (!success) {
+          print('⚠️ Failed to write glucose reading: ${reading.value} at ${reading.timestamp}');
+        }
+      }
+      print('✅ Synced ${readings.length} glucose readings to Health');
+    } 
+    catch (e) {
+      print('❌ Error syncing glucose to Health: $e');
+      // Don't throw - this is a non-critical background operation
+    }
   }
 
   void _startPolling() {
@@ -71,6 +96,10 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
       );
 
       state = AsyncValue.data(dashboardState);
+
+      if (dashboardState.history.isNotEmpty) {
+        await _syncGlucoseToHealth(dashboardState.history);
+      }
     } catch (e, stack) {
       if (!state.hasValue) {
         state = AsyncValue.error(e, stack);
