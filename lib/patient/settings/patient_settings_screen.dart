@@ -398,8 +398,8 @@ class _PatientSettingsScreenState extends ConsumerState<PatientSettingsScreen> {
         title: const Text("Dexcom G6/G7", style: TextStyle(fontWeight: FontWeight.bold)),
         subtitle: const Text("Sync your data.", style: TextStyle(fontSize: 12)),
         trailing: CustomElevatedButton(
-          width: 100,
-          height: 40,
+          width: 120,
+          height: 60,
           onPressed: _showDexcomDialog,
           text: "Connect",
           color: AppColors.primary,
@@ -428,7 +428,7 @@ class _PatientSettingsScreenState extends ConsumerState<PatientSettingsScreen> {
             title: Text("Dr. ${patient.physicianName}", style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text(isConfirmed ? "Confirmed" : "Pending...", style: const TextStyle(fontSize: 12)),
             trailing: isConfirmed ? const Icon(Icons.check_circle, color: AppColors.primary) : CustomElevatedButton(
-              width: 80, height: 36, text: "Accept", onPressed: () => ref.read(patientSettingsControllerProvider.notifier).acceptPhysicianRequest(patient.id),
+              width: 100, height: 50, text: "Accept", onPressed: () => ref.read(patientSettingsControllerProvider.notifier).acceptPhysicianRequest(patient.id),
             ),
           ),
         ),
@@ -465,6 +465,7 @@ class _PatientSettingsScreenState extends ConsumerState<PatientSettingsScreen> {
       ),
     );
   }
+
 }
 
 class _CozyCard extends StatelessWidget {

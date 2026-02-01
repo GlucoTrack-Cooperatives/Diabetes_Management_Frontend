@@ -62,7 +62,8 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
 
   void _startPolling() {
     _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 250), (_) {
+    // Faster polling for better real-time monitoring
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       refreshData();
     });
   }
@@ -74,6 +75,7 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
   }
 
   Future<void> refreshData({int historyHours = 24}) async {
+    // Keep showing old data while fetching new data (don't show loading spinner every minute)
     if (!state.hasValue) {
       state = const AsyncValue.loading();
     }
@@ -94,6 +96,9 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
         recentMeals: results[3] as List<RecentMeal>,
         patient: results[4] as Patient?,
       );
+      
+      // Debug print to see if new data is arriving
+      print("Dashboard Data Refreshed. Readings: ${dashboardState.history.length}");
 
       state = AsyncValue.data(dashboardState);
 
@@ -101,6 +106,7 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
         await _syncGlucoseToHealth(dashboardState.history);
       }
     } catch (e, stack) {
+      print("Error refreshing dashboard: $e");
       if (!state.hasValue) {
         state = AsyncValue.error(e, stack);
       }
