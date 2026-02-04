@@ -131,7 +131,7 @@ class _PatientList extends ConsumerWidget {
 
   const _PatientList({required this.isDesktop});
 
-  bool _isHighRisk(double? glucose) {
+  bool _isHighRisk(num? glucose) {
     if (glucose == null) return false;
     return glucose < 70 || glucose > 250;
   }
