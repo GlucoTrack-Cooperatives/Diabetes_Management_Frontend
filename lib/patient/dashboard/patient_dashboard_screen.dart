@@ -1,4 +1,5 @@
 import 'package:diabetes_management_system/models/dashboard_models.dart';
+import 'package:diabetes_management_system/models/patient_alert_settings.dart';
 import 'package:diabetes_management_system/models/patient_profile.dart';
 import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_controller.dart';
 import 'package:diabetes_management_system/theme/app_colors.dart';
@@ -73,7 +74,10 @@ class _DashboardMobileBody extends StatelessWidget {
             const SizedBox(height: 24),
             _buildNutritionSection(data.recentMeals),
             const SizedBox(height: 24),
-            _GlucoseMonitoringSection(readings: data.history),
+            _GlucoseMonitoringSection(
+              readings: data.history,
+              alertSettings: data.patient?.alertSettings,
+            ),
           ],
         ),
       ),
@@ -102,7 +106,10 @@ class _DashboardDesktopBody extends StatelessWidget {
                   flex: 2,
                   child: Column(
                     children: [
-                      _GlucoseMonitoringSection(readings: data.history),
+                      _GlucoseMonitoringSection(
+                        readings: data.history,
+                        alertSettings: data.patient?.alertSettings,
+                      ),
                       if (data.stats != null) ...[
                         const SizedBox(height: 24),
                         _buildStatsCard(data.stats!),
@@ -274,7 +281,8 @@ class _CozyCard extends StatelessWidget {
 
 class _GlucoseMonitoringSection extends StatefulWidget {
   final List<GlucoseReading> readings;
-  const _GlucoseMonitoringSection({required this.readings});
+  final PatientAlertSettings? alertSettings;
+  const _GlucoseMonitoringSection({required this.readings, this.alertSettings});
 
   @override
   State<_GlucoseMonitoringSection> createState() => _GlucoseMonitoringSectionState();
@@ -328,6 +336,8 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
         .map((r) => FlSpot(r.timestamp.millisecondsSinceEpoch.toDouble(), r.value / 18.0))
         .toList();
     spots.sort((a, b) => a.x.compareTo(b.x));
+
+    final thresholds = widget.alertSettings;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -395,6 +405,36 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
                 maxX: maxX,
                 minY: 0,
                 maxY: 20,
+                extraLinesData: ExtraLinesData(
+                  horizontalLines: [
+                    if (thresholds != null) ...[
+                      HorizontalLine(
+                        y: thresholds.criticalLowThreshold,
+                        color: Colors.red.withOpacity(0.5),
+                        strokeWidth: 2,
+                        dashArray: [5, 5],
+                        label: HorizontalLineLabel(
+                          show: true,
+                          alignment: Alignment.bottomRight,
+                          labelResolver: (line) => 'Crit Low',
+                          style: const TextStyle(fontSize: 9, color: Colors.red),
+                        ),
+                      ),
+                      HorizontalLine(
+                        y: thresholds.criticalHighThreshold,
+                        color: Colors.yellow.withOpacity(0.8),
+                        strokeWidth: 2,
+                        dashArray: [5, 5],
+                        label: HorizontalLineLabel(
+                          show: true,
+                          alignment: Alignment.topRight,
+                          labelResolver: (line) => 'Crit High',
+                          style: const TextStyle(fontSize: 9, color: Colors.orange),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
                 lineBarsData: [
                   LineChartBarData(
                     spots: spots,

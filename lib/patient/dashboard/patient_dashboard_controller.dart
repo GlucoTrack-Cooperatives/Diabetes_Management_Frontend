@@ -37,7 +37,7 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
 
   void _startPolling() {
     _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 250), (_) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       refreshData();
     });
   }

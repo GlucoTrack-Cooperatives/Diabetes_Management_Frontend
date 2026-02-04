@@ -259,6 +259,32 @@ class _GlucoseTrendsSection extends StatelessWidget {
                       color: Colors.green.withOpacity(0.3),
                       strokeWidth: 1,
                       dashArray: [5, 5]),
+                  if (state.alertSettings != null) ...[
+                    HorizontalLine(
+                      y: state.alertSettings!.criticalLowThreshold * 18.0,
+                      color: Colors.red.withOpacity(0.6),
+                      strokeWidth: 2,
+                      dashArray: [5, 5],
+                      label: HorizontalLineLabel(
+                        show: true,
+                        alignment: Alignment.bottomRight,
+                        labelResolver: (line) => 'Crit Low',
+                        style: const TextStyle(fontSize: 10, color: Colors.red, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    HorizontalLine(
+                      y: state.alertSettings!.criticalHighThreshold * 18.0,
+                      color: Colors.yellow.shade700,
+                      strokeWidth: 2,
+                      dashArray: [5, 5],
+                      label: HorizontalLineLabel(
+                        show: true,
+                        alignment: Alignment.topRight,
+                        labelResolver: (line) => 'Crit High',
+                        style: TextStyle(fontSize: 10, color: Colors.yellow.shade900, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ],
                 verticalLines: mealLines,
               ),

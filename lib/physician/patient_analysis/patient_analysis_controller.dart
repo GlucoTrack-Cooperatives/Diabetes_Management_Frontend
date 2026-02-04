@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/log_entry_dto.dart';
 import '../../models/dashboard_models.dart';
+import '../../models/patient_profile.dart';
+import 'package:diabetes_management_system/models/patient_alert_settings.dart';
 import '../../repositories/patient_analysis_repository.dart';
 
 // --- State Model ---
@@ -17,6 +19,7 @@ class PatientAnalysisState {
   final double averageGlucose;
   final List<LogEntryDTO> foodLogs;
   final Map<String, String> derivedInsulinSettings; // e.g., {'Basal': 'Lantus', 'Bolus': 'Novolog'}
+  final PatientAlertSettings? alertSettings;
 
   PatientAnalysisState({
     this.isLoading = true,
@@ -27,6 +30,7 @@ class PatientAnalysisState {
     this.averageGlucose = 0,
     this.foodLogs = const [],
     this.derivedInsulinSettings = const {},
+    this.alertSettings,
   });
 }
 
@@ -46,10 +50,12 @@ class PatientAnalysisController extends StateNotifier<PatientAnalysisState> {
       final results = await Future.wait([
         _repository.getGlucoseHistory(24, _patientId),
         _repository.getPatientRecentLogs(_patientId),
+        _repository.getPatientProfile(_patientId),
       ]);
-      final allLogs = results[1] as List<LogEntryDTO>;
-
+      
       final glucoseReadings = results[0] as List<GlucoseReading>;
+      final allLogs = results[1] as List<LogEntryDTO>;
+      final patientProfile = results[2] as Patient?;
 
       final foodLogs = allLogs.where((l) => l.type.toLowerCase() == 'food').toList();
       final insulinLogs = allLogs.where((l) => l.type.toLowerCase() == 'insulin').toList();
@@ -72,6 +78,7 @@ class PatientAnalysisController extends StateNotifier<PatientAnalysisState> {
         glucoseSpots: spots,
         foodLogs: foodLogs,
         derivedInsulinSettings: insulinSettings,
+        alertSettings: patientProfile?.alertSettings,
       );
     } catch (e) {
       // Handle error state appropriately
