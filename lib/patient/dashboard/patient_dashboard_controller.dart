@@ -12,6 +12,7 @@ class DashboardState {
   final DashboardStats? stats;
   final List<RecentMeal> recentMeals;
   final Patient? patient;
+  final Map<String, dynamic>? thresholds;
 
   DashboardState({
     this.latestGlucose,
@@ -19,6 +20,7 @@ class DashboardState {
     this.stats,
     this.recentMeals = const [],
     this.patient,
+    this.thresholds,
   });
 }
 
@@ -87,6 +89,7 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
         _repository.getStats(),
         _repository.getRecentMeals(),
         _repository.getPatientProfile(),
+        _repository.getPatientThresholds(),
       ]);
 
       final dashboardState = DashboardState(
@@ -95,6 +98,8 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
         stats: results[2] as DashboardStats?,
         recentMeals: results[3] as List<RecentMeal>,
         patient: results[4] as Patient?,
+        thresholds: results[5] as Map<String, dynamic>?,
+
       );
 
       // Debug print to see if new data is arriving

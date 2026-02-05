@@ -78,10 +78,10 @@ class _DashboardMobileBody extends ConsumerWidget {  // Change to ConsumerWidget
             const SizedBox(height: 24),
             _buildNutritionSection(data.recentMeals),
             const SizedBox(height: 24),
-            _GlucoseMonitoringSection(readings: data.history, unit: unit),  // Pass unit
             _GlucoseMonitoringSection(
               readings: data.history,
-              alertSettings: data.patient?.alertSettings,
+              thresholds: data.thresholds,
+              unit: unit,
             ),
           ],
         ),
@@ -112,10 +112,10 @@ class _DashboardDesktopBody extends ConsumerWidget {  // Change to ConsumerWidge
                   flex: 2,
                   child: Column(
                     children: [
-                      _GlucoseMonitoringSection(readings: data.history, unit: unit),  // Pass unit
                       _GlucoseMonitoringSection(
                         readings: data.history,
-                        alertSettings: data.patient?.alertSettings,
+                        thresholds: data.thresholds,
+                        unit: unit,
                       ),
                       if (data.stats != null) ...[
                         const SizedBox(height: 24),
@@ -288,10 +288,9 @@ class _CozyCard extends StatelessWidget {
 
 class _GlucoseMonitoringSection extends StatefulWidget {
   final List<GlucoseReading> readings;
-  final PatientAlertSettings? alertSettings;
-  const _GlucoseMonitoringSection({required this.readings, this.alertSettings});
+  final Map<String, dynamic>? thresholds;
   final GlucoseUnit unit;
-  const _GlucoseMonitoringSection({required this.readings, required this.unit});
+  const _GlucoseMonitoringSection({required this.readings, required this.unit, this.thresholds});
 
   @override
   State<_GlucoseMonitoringSection> createState() => _GlucoseMonitoringSectionState();
@@ -362,9 +361,25 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
       print('🔍 First spot: x=${DateTime.fromMillisecondsSinceEpoch(spots.first.x.toInt())}, y=${spots.first.y}');
       print('🔍 Last spot: x=${DateTime.fromMillisecondsSinceEpoch(spots.last.x.toInt())}, y=${spots.last.y}');
     }
-    final maxY = widget.unit == GlucoseUnit.mgdL ? 400.0 : 22.0;
+    final maxY = widget.unit == GlucoseUnit.mgdL ? 300.0 : 22.0;
 
-    final thresholds = widget.alertSettings;
+    final thresholds = widget.thresholds;
+
+    double? getVal(String key) {
+      if (thresholds == null || thresholds[key] == null) return null;
+      // Convert from mg/dL (stored in DB) to current display unit
+      final rawValue = double.tryParse(thresholds[key].toString()) ?? 0.0;
+      return widget.unit.convertFromMgdL(rawValue);
+    }
+
+    final low = getVal('lowThreshold');
+    final high = getVal('highThreshold');
+    final critLow = getVal('criticalLowThreshold');
+    final critHigh = getVal('criticalHighThreshold');
+
+
+    print('🔍 Thresholds: $thresholds');
+
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -446,12 +461,12 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
                 minX: minX,
                 maxX: maxX,
                 minY: 0,
-                maxY: 20,
+                maxY: maxY,
                 extraLinesData: ExtraLinesData(
                   horizontalLines: [
-                    if (thresholds != null) ...[
+                    if (critLow != null && critHigh != null) ...[
                       HorizontalLine(
-                        y: thresholds.criticalLowThreshold,
+                        y: critLow,
                         color: Colors.red.withOpacity(0.5),
                         strokeWidth: 2,
                         dashArray: [5, 5],
@@ -459,11 +474,11 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
                           show: true,
                           alignment: Alignment.bottomRight,
                           labelResolver: (line) => 'Crit Low',
-                          style: const TextStyle(fontSize: 9, color: Colors.red),
+                          style: const TextStyle(fontSize: 12, color: Colors.red),
                         ),
                       ),
                       HorizontalLine(
-                        y: thresholds.criticalHighThreshold,
+                        y: critHigh,
                         color: Colors.yellow.withOpacity(0.8),
                         strokeWidth: 2,
                         dashArray: [5, 5],
@@ -471,13 +486,12 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
                           show: true,
                           alignment: Alignment.topRight,
                           labelResolver: (line) => 'Crit High',
-                          style: const TextStyle(fontSize: 9, color: Colors.orange),
+                          style: const TextStyle(fontSize: 12, color: Colors.orange),
                         ),
                       ),
                     ],
                   ],
                 ),
-                maxY: maxY,
                 lineBarsData: [
                   LineChartBarData(
                     spots: spots,

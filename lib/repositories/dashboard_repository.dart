@@ -102,4 +102,19 @@ class DashboardRepository {
     }
   }
 
+  Future<Map<String, dynamic>> getPatientThresholds() async {
+    try {
+      final response = await _client.get('/patients/settings');
+
+      if (response is Map<String, dynamic>) {
+        return response;
+      }
+      print("response for thresholds: $response");
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      print("Error fetching profile: $e");
+      return Map<String, dynamic>();
+    }
+  }
+
 }
