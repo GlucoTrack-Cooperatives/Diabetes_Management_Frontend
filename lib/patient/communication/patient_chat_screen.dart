@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../widgets/chat_view.dart';
 import '../../utils/responsive_layout.dart';
-import '../../controllers/chat_controller.dart';
+import 'chat_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 

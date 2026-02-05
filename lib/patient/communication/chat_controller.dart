@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/communication.dart';
-import '../repositories/chat_repository.dart';
-import '../services/secure_storage_service.dart';
+import '../../models/communication.dart';
+import '../../repositories/chat_repository.dart';
+import '../../services/secure_storage_service.dart';
 import 'dart:async';
 
 final chatThreadsProvider = FutureProvider<List<ChatThread>>((ref) async {

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/communication.dart';
-import '../controllers/chat_controller.dart';
+import '../patient/communication/chat_controller.dart';
 
 class ChatView extends ConsumerStatefulWidget {
   final String title;

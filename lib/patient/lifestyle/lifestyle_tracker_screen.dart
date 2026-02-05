@@ -304,15 +304,32 @@ class _EventLogDialogState extends State<_EventLogDialog> {
   late TextEditingController _eventController;
   late TextEditingController _notesController;
 
+  final List<String> _quickEvents = ['Stress', 'Fever', 'Illness', 'Period', 'Travel', 'Party'];
+  String? _selectedQuickEvent;
+
   @override
   void initState() {
     super.initState();
     _eventController = TextEditingController();
     _notesController = TextEditingController();
+
+    // Listen to text changes to manage bubble selection state
+    _eventController.addListener(_handleTextChanged);
+  }
+
+  void _handleTextChanged() {
+    // If the text in the field doesn't match the selected bubble, deselect the bubble
+    if (_selectedQuickEvent != _eventController.text) {
+      setState(() {
+        _selectedQuickEvent = null;
+      });
+    }
   }
 
   @override
   void dispose() {
+    // Remove listener and dispose
+    _eventController.removeListener(_handleTextChanged);
     _eventController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -325,12 +342,44 @@ class _EventLogDialogState extends State<_EventLogDialog> {
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Events like stress or illness can affect your blood sugar levels.', style: AppTextStyles.bodyText2),
+            const Text(
+              'Events like stress or illness can affect your blood sugar levels.',
+              style: AppTextStyles.bodyText2,
+            ),
+            const SizedBox(height: 16),
+
+            // Quick Selection Bubbles
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 4.0,
+              children: _quickEvents.map((event) {
+                final isSelected = _selectedQuickEvent == event;
+                return ChoiceChip(
+                  label: Text(event),
+                  selected: isSelected,
+                  selectedColor: AppColors.secondary.withOpacity(0.3),
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedQuickEvent = event;
+                        _eventController.text = event;
+                      } else {
+                        _selectedQuickEvent = null;
+                        _eventController.clear();
+                      }
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+
             const SizedBox(height: 16),
             CustomTextFormField(
               controller: _eventController,
               labelText: 'Event Type (e.g., Stress, Fever)',
+              // onChanged removed to fix the error
             ),
             const SizedBox(height: 12),
             CustomTextFormField(
@@ -341,11 +390,19 @@ class _EventLogDialogState extends State<_EventLogDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel')
+        ),
         ElevatedButton(
           onPressed: () {
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Event logged!')));
+            final eventType = _eventController.text;
+            if (eventType.isNotEmpty) {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Logged: $eventType')),
+              );
+            }
           },
           child: const Text('Log'),
         ),
