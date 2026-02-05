@@ -16,7 +16,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 
 class ApiClient {
   final SecureStorageService _storage;
-  // Define your base URL here centrally
+  // Define your base URL here centrally - pointing to GKE production backend
   String get baseUrl {
     if (kIsWeb) return "http://127.0.0.1:8080/api/diabetes-management/api";
     // Android emulator uses 10.0.2.2 to reach host machine

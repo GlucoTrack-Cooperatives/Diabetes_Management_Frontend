@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:health/health.dart';
 import '../models/health_data_point.dart' as model;
+import 'dart:io' show Platform;
 
 /// Provider for HealthApiService
 final healthApiServiceProvider = Provider<HealthApiService>((ref) {
@@ -24,8 +25,10 @@ class HealthApiService {
     HealthDataType.WORKOUT,
     HealthDataType.SLEEP_SESSION,
     HealthDataType.SLEEP_ASLEEP,
+    HealthDataType.SLEEP_IN_BED,   // iOS only
     HealthDataType.WATER,
-    HealthDataType.TOTAL_CALORIES_BURNED
+    HealthDataType.TOTAL_CALORIES_BURNED,
+    HealthDataType.BASAL_ENERGY_BURNED, // iOS only
   ];
 
   /// Request permissions for all health data types
@@ -339,59 +342,68 @@ class HealthApiService {
   /// Uses SLEEP_SESSION for Health Connect compatibility
   /// Deduplicates entries with same time range from different sources
   /// Prefer the original APP !! (e.g Sleep as Android) over google fit
+  /// Fetch sleep data and return total duration in minutes
+  /// Uses platform-specific sleep types (iOS: SLEEP_IN_BED, Android: SLEEP_SESSION)
   Future<double> getTotalSleepMinutes(DateTime startTime, DateTime endTime) async {
     try {
       print('😴 Querying sleep from $startTime to $endTime');
-      print('😴 Local timezone: ${DateTime.now().timeZoneName}');
+      print('😴 Platform: ${Platform.isIOS ? 'iOS' : Platform.isAndroid ? 'Android' : 'Other'}');
 
-      // Convert to local time explicitly
       final localStart = startTime.toLocal();
       final localEnd = endTime.toLocal();
 
-      print('😴 Local time range: $localStart to $localEnd');
+      List<HealthDataPoint> healthData = [];
 
-      // Try both SLEEP_SESSION (Health Connect) and SLEEP_ASLEEP (older)
-      final sleepSession = await _health.getHealthDataFromTypes(
-        types: [HealthDataType.SLEEP_SESSION],
-        startTime: localStart,
-        endTime: localEnd,
-      );
+      if (Platform.isIOS) {
+        // iOS: Use SLEEP_IN_BED and SLEEP_ASLEEP
+        final sleepInBed = await _health.getHealthDataFromTypes(
+          types: [HealthDataType.SLEEP_IN_BED],
+          startTime: localStart,
+          endTime: localEnd,
+        );
+        
+        final sleepAsleep = await _health.getHealthDataFromTypes(
+          types: [HealthDataType.SLEEP_ASLEEP],
+          startTime: localStart,
+          endTime: localEnd,
+        );
 
-      final sleepAsleep = await _health.getHealthDataFromTypes(
-        types: [HealthDataType.SLEEP_ASLEEP],
-        startTime: localStart,
-        endTime: localEnd,
-      );
+        healthData = [...sleepInBed, ...sleepAsleep];
+        print('😴 iOS sleep data: ${sleepInBed.length} in bed, ${sleepAsleep.length} asleep');
+        
+      } else if (Platform.isAndroid) {
+        // Android: Use SLEEP_SESSION and SLEEP_ASLEEP
+        final sleepSession = await _health.getHealthDataFromTypes(
+          types: [HealthDataType.SLEEP_SESSION],
+          startTime: localStart,
+          endTime: localEnd,
+        );
 
-      final healthData = [...sleepSession, ...sleepAsleep];
+        final sleepAsleep = await _health.getHealthDataFromTypes(
+          types: [HealthDataType.SLEEP_ASLEEP],
+          startTime: localStart,
+          endTime: localEnd,
+        );
 
-      print('😴 Raw sleep data points: ${healthData.length} (${sleepSession.length} sessions, ${sleepAsleep.length} asleep)');
+        healthData = [...sleepSession, ...sleepAsleep];
+        print('😴 Android sleep data: ${sleepSession.length} sessions, ${sleepAsleep.length} asleep');
+      }
+
+      print('😴 Total raw sleep data points: ${healthData.length}');
 
       if (healthData.isEmpty) {
-        print('😴 ⚠️ No sleep data returned. Checking permissions...');
-        final hasSessionPermission = await _health.hasPermissions(
-          [HealthDataType.SLEEP_SESSION],
-          permissions: [HealthDataAccess.READ],
-        );
-        final hasAsleepPermission = await _health.hasPermissions(
-          [HealthDataType.SLEEP_ASLEEP],
-          permissions: [HealthDataAccess.READ],
-        );
-        print('😴 Sleep session permission: $hasSessionPermission');
-        print('😴 Sleep asleep permission: $hasAsleepPermission');
+        print('😴 ⚠️ No sleep data returned');
+        return 0.0;
       }
 
       // Deduplicate entries with same start/end times
       final uniqueSessions = <String, HealthDataPoint>{};
 
       for (final point in healthData) {
-        // Create a unique key based on start and end times (rounded to nearest minute)
         final startKey = point.dateFrom.millisecondsSinceEpoch ~/ 60000;
         final endKey = point.dateTo.millisecondsSinceEpoch ~/ 60000;
         final key = '$startKey-$endKey';
 
-        // Only keep one entry per unique time range
-        // Prefer non-Google Fit sources (original apps like Sleep as Android)
         if (!uniqueSessions.containsKey(key) ||
             !point.sourceName.contains('fitness')) {
           uniqueSessions[key] = point;
@@ -403,22 +415,20 @@ class HealthApiService {
       double totalMinutes = 0.0;
 
       for (final point in uniqueSessions.values) {
-        // Calculate duration from dateFrom and dateTo
         final duration = point.dateTo.difference(point.dateFrom);
         final minutes = duration.inMinutes.toDouble();
 
-        print('  Sleep session: ${point.dateFrom.toLocal()} to ${point.dateTo.toLocal()} = $minutes min (source: ${point.sourceName}, type: ${point.type.name})');
+        print('  Sleep: ${point.dateFrom.toLocal()} to ${point.dateTo.toLocal()} = $minutes min (${point.type.name})');
         totalMinutes += minutes;
       }
 
-      print('😴 Total sleep minutes calculated: $totalMinutes');
+      print('😴 Total sleep minutes: $totalMinutes');
       return totalMinutes;
     } catch (e) {
-      print('❌ Error fetching sleep data: $e');
-      print('Stack trace: ${StackTrace.current}');
+        print('❌ Error fetching sleep data: $e');
       return 0.0;
     }
-  }
+}
 
   /// Fetch sleep data (DEPRECATED - use getTotalSleepMinutes instead)
   /// This returns individual sleep sessions as data points

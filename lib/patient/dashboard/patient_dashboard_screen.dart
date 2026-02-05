@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../models/glucose_alert_settings.dart';
+import '../settings/alert_settings_controller.dart';
 
 class PatientDashboardScreen extends ConsumerWidget {
   const PatientDashboardScreen({super.key});
@@ -52,12 +54,14 @@ class PatientDashboardScreen extends ConsumerWidget {
   }
 }
 
-class _DashboardMobileBody extends StatelessWidget {
+class _DashboardMobileBody extends ConsumerWidget {  // Change to ConsumerWidget
   final DashboardState data;
   const _DashboardMobileBody({required this.data});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {  // Add WidgetRef
+    final unit = ref.watch(alertSettingsProvider).displayUnit;
+
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -66,14 +70,15 @@ class _DashboardMobileBody extends StatelessWidget {
           children: [
             _buildHeader(data.patient),
             const SizedBox(height: 24),
-            _buildGlucoseCard(data.latestGlucose),
+            _buildGlucoseCard(data.latestGlucose, unit),  // Pass unit
             if (data.stats != null) ...[
               const SizedBox(height: 24),
-              _buildStatsCard(data.stats!),
+              _buildStatsCard(data.stats!, unit),  // Pass unit
             ],
             const SizedBox(height: 24),
             _buildNutritionSection(data.recentMeals),
             const SizedBox(height: 24),
+            _GlucoseMonitoringSection(readings: data.history, unit: unit),  // Pass unit
             _GlucoseMonitoringSection(
               readings: data.history,
               alertSettings: data.patient?.alertSettings,
@@ -85,12 +90,13 @@ class _DashboardMobileBody extends StatelessWidget {
   }
 }
 
-class _DashboardDesktopBody extends StatelessWidget {
+class _DashboardDesktopBody extends ConsumerWidget {  // Change to ConsumerWidget
   final DashboardState data;
   const _DashboardDesktopBody({required this.data});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unit = ref.watch(alertSettingsProvider).displayUnit;
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -106,13 +112,14 @@ class _DashboardDesktopBody extends StatelessWidget {
                   flex: 2,
                   child: Column(
                     children: [
+                      _GlucoseMonitoringSection(readings: data.history, unit: unit),  // Pass unit
                       _GlucoseMonitoringSection(
                         readings: data.history,
                         alertSettings: data.patient?.alertSettings,
                       ),
                       if (data.stats != null) ...[
                         const SizedBox(height: 24),
-                        _buildStatsCard(data.stats!),
+                        _buildStatsCard(data.stats!, unit),  // Pass unit
                       ],
                     ],
                   ),
@@ -122,7 +129,7 @@ class _DashboardDesktopBody extends StatelessWidget {
                   flex: 1,
                   child: Column(
                     children: [
-                      _buildGlucoseCard(data.latestGlucose),
+                      _buildGlucoseCard(data.latestGlucose, unit),  // Pass unit
                       const SizedBox(height: 16),
                       _buildNutritionSection(data.recentMeals),
                     ],
@@ -149,7 +156,7 @@ Widget _buildHeader(Patient? patient) {
   );
 }
 
-Widget _buildGlucoseCard(GlucoseReading? glucose) {
+Widget _buildGlucoseCard(GlucoseReading? glucose, GlucoseUnit unit) {
   if (glucose == null) return const _CozyCard(child: Center(child: Text("No Data")));
 
   return _CozyCard(
@@ -163,10 +170,10 @@ Widget _buildGlucoseCard(GlucoseReading? glucose) {
             const Text('LATEST GLUCOSE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary)),
             const SizedBox(height: 8),
             Text(
-              (glucose.value / 18.0).toStringAsFixed(1),
+              unit.formatValue(glucose.value),  // Use unit preference
               style: AppTextStyles.headline1.copyWith(fontSize: 40),
             ),
-            const Text('mmol/L', style: AppTextStyles.bodyText2),
+            Text(unit.displayName, style: AppTextStyles.bodyText2),  // Dynamic unit label
           ],
         ),
         _TrendIndicator(trend: glucose.trend ?? ''),
@@ -175,7 +182,7 @@ Widget _buildGlucoseCard(GlucoseReading? glucose) {
   );
 }
 
-Widget _buildStatsCard(DashboardStats stats) {
+Widget _buildStatsCard(DashboardStats stats, GlucoseUnit unit) {
   return _CozyCard(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,7 +193,7 @@ Widget _buildStatsCard(DashboardStats stats) {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _statItem('${stats.timeInRange.toInt()}%', 'In Range', Colors.green),
-            _statItem('${(stats.averageGlucose / 18.0).toStringAsFixed(1)}', 'Avg mmol/L', AppColors.primary),
+            _statItem(unit.formatValue(stats.averageGlucose), 'Avg ${unit.displayName}', AppColors.primary),
             _statItem('${stats.timeBelowRange.toInt()}%', 'Low', Colors.orange),
           ],
         ),
@@ -283,6 +290,8 @@ class _GlucoseMonitoringSection extends StatefulWidget {
   final List<GlucoseReading> readings;
   final PatientAlertSettings? alertSettings;
   const _GlucoseMonitoringSection({required this.readings, this.alertSettings});
+  final GlucoseUnit unit;
+  const _GlucoseMonitoringSection({required this.readings, required this.unit});
 
   @override
   State<_GlucoseMonitoringSection> createState() => _GlucoseMonitoringSectionState();
@@ -331,11 +340,29 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
   @override
   Widget build(BuildContext context) {
     final (minX, maxX, interval) = _getAxisDetails();
+
+    //DEBUG
+    print('🔍 Chart Debug Info:');
+    print('🔍 Total readings from backend: ${widget.readings.length}');
+    print('🔍 Selected range: $_selectedRange');
+    print('🔍 Time window: ${DateTime.fromMillisecondsSinceEpoch(minX.toInt())} to ${DateTime.fromMillisecondsSinceEpoch(maxX.toInt())}');
+    if (widget.readings.isNotEmpty) {
+      print('🔍 First reading: ${widget.readings.first.timestamp} = ${widget.readings.first.value} mg/dL');
+      print('🔍 Last reading: ${widget.readings.last.timestamp} = ${widget.readings.last.value} mg/dL');
+    }
     final spots = widget.readings
         .where((r) => r.timestamp.millisecondsSinceEpoch >= minX && r.timestamp.millisecondsSinceEpoch <= maxX)
-        .map((r) => FlSpot(r.timestamp.millisecondsSinceEpoch.toDouble(), r.value / 18.0))
+        .map((r) => FlSpot(
+          r.timestamp.millisecondsSinceEpoch.toDouble(),
+          widget.unit.convertFromMgdL(r.value)  // Use unit conversion
+        ))
         .toList();
     spots.sort((a, b) => a.x.compareTo(b.x));
+    if (spots.isNotEmpty) {
+      print('🔍 First spot: x=${DateTime.fromMillisecondsSinceEpoch(spots.first.x.toInt())}, y=${spots.first.y}');
+      print('🔍 Last spot: x=${DateTime.fromMillisecondsSinceEpoch(spots.last.x.toInt())}, y=${spots.last.y}');
+    }
+    final maxY = widget.unit == GlucoseUnit.mgdL ? 400.0 : 22.0;
 
     final thresholds = widget.alertSettings;
 
@@ -384,6 +411,21 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
             height: 250,
             child: LineChart(
               LineChartData(
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        final dateTime = DateTime.fromMillisecondsSinceEpoch(spot.x.toInt());
+                        final formattedTime = DateFormat('HH:mm').format(dateTime);
+                        final formattedValue = widget.unit.formatValue(widget.unit == GlucoseUnit.mgdL ? spot.y : spot.y * 18.0);
+                        return LineTooltipItem(
+                          '$formattedValue ${widget.unit.displayName}\n$formattedTime',
+                          const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
                 gridData: const FlGridData(show: false),
                 titlesData: FlTitlesData(
                   rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -435,6 +477,7 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
                     ],
                   ],
                 ),
+                maxY: maxY,
                 lineBarsData: [
                   LineChartBarData(
                     spots: spots,

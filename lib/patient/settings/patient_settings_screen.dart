@@ -9,6 +9,8 @@ import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
 import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
 import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_controller.dart';
 import 'package:diabetes_management_system/patient/settings/patient_settings_controller.dart';
+import '../../models/glucose_alert_settings.dart';
+import 'alert_settings_controller.dart';
 
 class PatientSettingsScreen extends ConsumerStatefulWidget {
   const PatientSettingsScreen({super.key});
@@ -194,7 +196,27 @@ class _PatientSettingsScreenState extends ConsumerState<PatientSettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("THRESHOLDS (MMOL/L)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("DISPLAY UNIT", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary)),
+                SegmentedButton<GlucoseUnit>(
+                  segments: const [
+                    ButtonSegment(value: GlucoseUnit.mgdL, label: Text('mg/dL')),
+                    ButtonSegment(value: GlucoseUnit.mmolL, label: Text('mmol/L')),
+                  ],
+                  selected: {ref.watch(alertSettingsProvider).displayUnit},
+                  onSelectionChanged: (Set<GlucoseUnit> newSelection) {
+                    ref.read(alertSettingsControllerProvider).updateDisplayUnit(newSelection.first);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: AppColors.border, thickness: 1),
+            const SizedBox(height: 16),
+            
+            const Text("THRESHOLDS (mg/dL)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary)),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -231,6 +253,79 @@ class _PatientSettingsScreenState extends ConsumerState<PatientSettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDateField(String label, TextEditingController controller) {
+    final Color inputFillColor = const Color(0xFFF2F4F7);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 12.0, bottom: 8.0),
+          child: Text(
+            label,
+            style: AppTextStyles.bodyText1.copyWith(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: inputFillColor,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            readOnly: true,
+            style: AppTextStyles.bodyText1,
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              suffixIcon: const Icon(Icons.calendar_today, color: AppColors.primary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              ),
+              filled: true,
+              fillColor: inputFillColor,
+            ),
+            onTap: () async {
+              final DateTime? pickedDate = await showDatePicker(
+                context: context,
+                initialDate: controller.text.isNotEmpty 
+                    ? DateTime.tryParse(controller.text) ?? DateTime.now()
+                    : DateTime.now(),
+                firstDate: DateTime(1900),
+                lastDate: DateTime.now(),
+              );
+
+              if (pickedDate != null) {
+                final formattedDate = "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+                controller.text = formattedDate;
+              }
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -279,9 +374,9 @@ class _PatientSettingsScreenState extends ConsumerState<PatientSettingsScreen> {
           const SizedBox(height: 16),
           CustomTextFormField(controller: _phoneController, labelText: "Phone Number", keyboardType: TextInputType.phone),
           const SizedBox(height: 16),
-          CustomTextFormField(controller: _dobController, labelText: "Date of Birth (YYYY-MM-DD)"),
+          _buildDateField("Date of Birth", _dobController),
           const SizedBox(height: 16),
-          CustomTextFormField(controller: _diagnosisDateController, labelText: "Diagnosis Date"),
+          _buildDateField("Diagnosis Date", _diagnosisDateController),
           const SizedBox(height: 16),
           CustomTextFormField(controller: _emergencyContactPhoneController, labelText: "Emergency Contact"),
           const SizedBox(height: 24),
