@@ -38,8 +38,12 @@ class ApiClient {
   }
 
   // Generic GET
-  Future<dynamic> get(String endpoint) async {
-    final uri = Uri.parse('$baseUrl$endpoint');
+  Future<dynamic> get(String endpoint, {Map<String, String>? queryParameters}) async {
+    Uri uri = Uri.parse('$baseUrl$endpoint');
+    if (queryParameters != null) {
+      uri = uri.replace(queryParameters: queryParameters);
+    }
+
     final headers = await _getHeaders();
 
     if (kDebugMode) {

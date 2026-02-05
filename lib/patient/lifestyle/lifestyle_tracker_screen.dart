@@ -5,7 +5,9 @@ import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
 import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'lifestyle_controller.dart';
+import '../../models/health_event_request.dart';
 
 class LifestyleTrackerScreen extends ConsumerWidget {
   const LifestyleTrackerScreen({super.key});
@@ -63,6 +65,8 @@ class _MobileLifestyleBody extends StatelessWidget {
                 text: 'Log Special Event',
                 color: AppColors.secondary,
               ),
+              const SizedBox(height: 32),
+              _EventHistorySection(data: data),
             ],
           ),
         ),
@@ -106,9 +110,195 @@ class _DesktopLifestyleBody extends StatelessWidget {
                 color: AppColors.secondary,
               ),
             ),
+            const SizedBox(height: 40),
+            _EventHistorySection(data: data),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _EventHistorySection extends ConsumerWidget {
+  final LifestyleData data;
+  const _EventHistorySection({required this.data});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final weekEnd = data.selectedWeekStart.add(const Duration(days: 6));
+    final controller = ref.read(lifestyleControllerProvider.notifier);
+    final DateFormat formatter = DateFormat('dd MMM');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Event History', style: AppTextStyles.headline2),
+            Row(
+              children: [
+                IconButton(
+                    icon: const Icon(Icons.chevron_left),
+                    onPressed: () => controller.changeWeek(-1)
+                ),
+                Text(
+                  '${formatter.format(data.selectedWeekStart)} - ${formatter.format(weekEnd)}',
+                  style: AppTextStyles.bodyText1.copyWith(fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                    icon: const Icon(Icons.chevron_right),
+                    onPressed: () => controller.changeWeek(1)
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (data.isEventsLoading)
+          const Center(child: Padding(
+            padding: EdgeInsets.all(20.0),
+            child: CircularProgressIndicator(),
+          ))
+        else if (data.healthEvents.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Center(child: Text('No events logged for this week')),
+          )
+        else
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+                side: BorderSide(color: Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(12)
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: data.healthEvents.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final event = data.healthEvents[index];
+                return ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: AppColors.lavender,
+                    child: Icon(Icons.event_note, color: AppColors.primary, size: 20),
+                  ),
+                  title: Text(event.eventType, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(event.notes?.isNotEmpty == true ? event.notes! : 'No notes added'),
+                  trailing: Text(
+                    DateFormat('E, HH:mm').format(event.timestamp.toLocal()),
+                    style: AppTextStyles.bodyText2.copyWith(fontSize: 12),
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+void _showEventDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) => const _EventLogDialog(),
+  );
+}
+
+class _EventLogDialog extends ConsumerStatefulWidget {
+  const _EventLogDialog();
+
+  @override
+  ConsumerState<_EventLogDialog> createState() => _EventLogDialogState();
+}
+
+class _EventLogDialogState extends ConsumerState<_EventLogDialog> {
+  late TextEditingController _eventController;
+  late TextEditingController _notesController;
+  final List<String> _quickEvents = ['Stress', 'Fever', 'Illness', 'Period', 'Travel', 'Party'];
+  String? _selectedQuickEvent;
+
+  @override
+  void initState() {
+    super.initState();
+    _eventController = TextEditingController();
+    _notesController = TextEditingController();
+    _eventController.addListener(_handleTextChanged);
+  }
+
+  void _handleTextChanged() {
+    if (_selectedQuickEvent != _eventController.text) {
+      setState(() { _selectedQuickEvent = null; });
+    }
+  }
+
+  @override
+  void dispose() {
+    _eventController.removeListener(_handleTextChanged);
+    _eventController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Log Special Event'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Events can affect blood sugar.', style: AppTextStyles.bodyText2),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 4.0,
+              children: _quickEvents.map((event) {
+                final isSelected = _selectedQuickEvent == event;
+                return ChoiceChip(
+                  label: Text(event),
+                  selected: isSelected,
+                  selectedColor: AppColors.secondary.withOpacity(0.3),
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedQuickEvent = event;
+                        _eventController.text = event;
+                      } else {
+                        _selectedQuickEvent = null;
+                        _eventController.clear();
+                      }
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            CustomTextFormField(controller: _eventController, labelText: 'Event Type'),
+            const SizedBox(height: 12),
+            CustomTextFormField(controller: _notesController, labelText: 'Notes'),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(
+          onPressed: () async {
+            if (_eventController.text.isNotEmpty) {
+              await ref.read(lifestyleControllerProvider.notifier).logEvent(_eventController.text, _notesController.text);
+              if (context.mounted) Navigator.pop(context);
+            }
+          },
+          child: const Text('Log'),
+        ),
+      ],
     );
   }
 }
@@ -122,8 +312,6 @@ class _SleepCard extends StatelessWidget {
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
     final totalHours = duration.inMinutes / 60;
-    final sleepQuality = _getSleepQuality(totalHours);
-
     return Card(
       elevation: 0,
       color: AppColors.lavender,
@@ -133,36 +321,19 @@ class _SleepCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.nightlight_round, color: AppColors.textPrimary, size: 24),
-                const SizedBox(width: 8),
-                Text('Sleep', style: AppTextStyles.headline2),
-              ],
-            ),
+            Row(children: [
+              const Icon(Icons.nightlight_round, size: 24),
+              const SizedBox(width: 8),
+              Text('Sleep', style: AppTextStyles.headline2),
+            ]),
             const Spacer(),
             Text('${hours}h ${minutes}m', style: AppTextStyles.headline1.copyWith(fontSize: 28)),
-            Text(sleepQuality, style: AppTextStyles.bodyText2),
             const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: (totalHours / 8).clamp(0.0, 1.0),
-                backgroundColor: Colors.white.withOpacity(0.5),
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-              ),
-            ),
+            LinearProgressIndicator(value: (totalHours / 8).clamp(0.0, 1.0)),
           ],
         ),
       ),
     );
-  }
-
-  String _getSleepQuality(double hours) {
-    if (hours == 0) return 'No data';
-    if (hours < 6) return 'Poor';
-    if (hours < 7.5) return 'Fair';
-    return 'Good';
   }
 }
 
@@ -173,8 +344,6 @@ class _ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double progress = (steps / 10000).clamp(0.0, 1.0);
-
     return Card(
       elevation: 0,
       color: AppColors.mint,
@@ -186,30 +355,8 @@ class _ActivityCard extends StatelessWidget {
           children: [
             Text('Activity', style: AppTextStyles.headline2),
             const Spacer(),
-            Row(
-              children: [
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      value: progress,
-                      strokeWidth: 4,
-                      backgroundColor: Colors.white.withOpacity(0.5),
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                    ),
-                    const Icon(Icons.directions_walk, size: 16, color: AppColors.primary),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('$steps steps', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text('${calories.toInt()} kcal', style: AppTextStyles.bodyText2),
-                  ],
-                )
-              ],
-            ),
+            Text('$steps steps', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text('${calories.toInt()} kcal', style: AppTextStyles.bodyText2),
           ],
         ),
       ),
@@ -234,8 +381,7 @@ class _WeightCard extends StatelessWidget {
           children: [
             Text('Weight', style: AppTextStyles.headline2),
             const Spacer(),
-            Text(weight != null ? weight!.toStringAsFixed(1) : '--', style: AppTextStyles.headline1.copyWith(fontSize: 28)),
-            const Text('kg', style: AppTextStyles.bodyText2),
+            Text(weight != null ? '${weight!.toStringAsFixed(1)} kg' : '-- kg', style: AppTextStyles.headline1.copyWith(fontSize: 28)),
           ],
         ),
       ),
@@ -254,159 +400,20 @@ class _WaterCard extends ConsumerWidget {
       color: AppColors.skyBlue,
       child: InkWell(
         onTap: () => ref.read(lifestyleControllerProvider.notifier).addWater(),
-        borderRadius: BorderRadius.circular(24),
         child: Container(
           height: 160,
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Water', style: AppTextStyles.headline2),
-                  const Icon(Icons.add_circle, color: AppColors.primary),
-                ],
-              ),
+              Text('Water', style: AppTextStyles.headline2),
               const Spacer(),
-              Text('$glasses / 8 Glasses', style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: (glasses / 8).clamp(0.0, 1.0),
-                backgroundColor: Colors.white.withOpacity(0.5),
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-              ),
-              const SizedBox(height: 4),
-              const Text('Tap to add a glass', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+              Text('$glasses / 8 Glasses'),
+              LinearProgressIndicator(value: (glasses / 8).clamp(0.0, 1.0)),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-void _showEventDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) => const _EventLogDialog(),
-  );
-}
-
-class _EventLogDialog extends StatefulWidget {
-  const _EventLogDialog();
-
-  @override
-  State<_EventLogDialog> createState() => _EventLogDialogState();
-}
-
-class _EventLogDialogState extends State<_EventLogDialog> {
-  late TextEditingController _eventController;
-  late TextEditingController _notesController;
-
-  final List<String> _quickEvents = ['Stress', 'Fever', 'Illness', 'Period', 'Travel', 'Party'];
-  String? _selectedQuickEvent;
-
-  @override
-  void initState() {
-    super.initState();
-    _eventController = TextEditingController();
-    _notesController = TextEditingController();
-
-    // Listen to text changes to manage bubble selection state
-    _eventController.addListener(_handleTextChanged);
-  }
-
-  void _handleTextChanged() {
-    // If the text in the field doesn't match the selected bubble, deselect the bubble
-    if (_selectedQuickEvent != _eventController.text) {
-      setState(() {
-        _selectedQuickEvent = null;
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    // Remove listener and dispose
-    _eventController.removeListener(_handleTextChanged);
-    _eventController.dispose();
-    _notesController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Log Special Event'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Events like stress or illness can affect your blood sugar levels.',
-              style: AppTextStyles.bodyText2,
-            ),
-            const SizedBox(height: 16),
-
-            // Quick Selection Bubbles
-            Wrap(
-              spacing: 8.0,
-              runSpacing: 4.0,
-              children: _quickEvents.map((event) {
-                final isSelected = _selectedQuickEvent == event;
-                return ChoiceChip(
-                  label: Text(event),
-                  selected: isSelected,
-                  selectedColor: AppColors.secondary.withOpacity(0.3),
-                  onSelected: (selected) {
-                    setState(() {
-                      if (selected) {
-                        _selectedQuickEvent = event;
-                        _eventController.text = event;
-                      } else {
-                        _selectedQuickEvent = null;
-                        _eventController.clear();
-                      }
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(height: 16),
-            CustomTextFormField(
-              controller: _eventController,
-              labelText: 'Event Type (e.g., Stress, Fever)',
-              // onChanged removed to fix the error
-            ),
-            const SizedBox(height: 12),
-            CustomTextFormField(
-              controller: _notesController,
-              labelText: 'Notes',
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel')
-        ),
-        ElevatedButton(
-          onPressed: () {
-            final eventType = _eventController.text;
-            if (eventType.isNotEmpty) {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Logged: $eventType')),
-              );
-            }
-          },
-          child: const Text('Log'),
-        ),
-      ],
     );
   }
 }

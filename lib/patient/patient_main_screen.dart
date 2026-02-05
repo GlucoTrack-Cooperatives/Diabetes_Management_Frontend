@@ -1,5 +1,5 @@
 import 'package:diabetes_management_system/auth/login/login_screen.dart';
-import 'package:diabetes_management_system/controllers/chat_controller.dart';
+import 'package:diabetes_management_system/patient/communication/chat_controller.dart';
 import 'package:diabetes_management_system/patient/communication/patient_chat_screen.dart';
 import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_screen.dart';
 import 'package:diabetes_management_system/patient/lifestyle/lifestyle_controller.dart';
