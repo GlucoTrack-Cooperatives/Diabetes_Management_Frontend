@@ -1,4 +1,5 @@
 import 'package:diabetes_management_system/models/dashboard_models.dart';
+import 'package:diabetes_management_system/models/iod_model.dart';
 import 'package:diabetes_management_system/models/patient_alert_settings.dart';
 import 'package:diabetes_management_system/models/patient_profile.dart';
 import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_controller.dart';
@@ -11,6 +12,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/glucose_alert_settings.dart';
+import 'package:diabetes_management_system/models/log_entry_dto.dart';
 import '../settings/alert_settings_controller.dart';
 
 class PatientDashboardScreen extends ConsumerWidget {
@@ -70,6 +72,8 @@ class _DashboardMobileBody extends ConsumerWidget {  // Change to ConsumerWidget
           children: [
             _buildHeader(data.patient),
             const SizedBox(height: 24),
+            _buildIOBCard(data.insulinLogs),
+            const SizedBox(height: 24),
             _buildGlucoseCard(data.latestGlucose, unit),  // Pass unit
             if (data.stats != null) ...[
               const SizedBox(height: 24),
@@ -104,6 +108,8 @@ class _DashboardDesktopBody extends ConsumerWidget {  // Change to ConsumerWidge
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(data.patient),
+            const SizedBox(height: 24),
+            _buildIOBCard(data.insulinLogs),
             const SizedBox(height: 24),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,6 +263,41 @@ Widget _buildNutritionSection(List<RecentMeal> meals) {
               ),
       )
     ],
+  );
+}
+
+Widget _buildIOBCard(List<LogEntryDTO> logs) {
+  final iob = IOBCalculator.calculate(logs);
+
+  if (iob.totalUnits <= 0) return const SizedBox.shrink();
+
+  return _CozyCard(
+    color: Colors.orange.shade50,
+    child: Row(
+      children: [
+        const Icon(Icons.timer_outlined, color: Colors.orange, size: 32),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("ACTIVE INSULIN (IOB)",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.orange)),
+              Text("${iob.totalUnits} Units",
+                  style: AppTextStyles.headline2.copyWith(color: Colors.orange.shade900)),
+            ],
+          ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            const Text("CLEAR IN", style: TextStyle(fontSize: 10, color: Colors.grey)),
+            Text("${iob.remainingTime.inHours}h ${iob.remainingTime.inMinutes.remainder(60)}m",
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        )
+      ],
+    ),
   );
 }
 

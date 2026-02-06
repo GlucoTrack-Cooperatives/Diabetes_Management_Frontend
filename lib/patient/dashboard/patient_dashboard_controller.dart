@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/patient_profile.dart';
 import '../../repositories/dashboard_repository.dart';
 import '../../models/dashboard_models.dart';
+import '../../models/log_entry_dto.dart';
 import '../../services/health_api_service.dart';
 import 'package:health/health.dart';
 
@@ -13,6 +14,7 @@ class DashboardState {
   final List<RecentMeal> recentMeals;
   final Patient? patient;
   final Map<String, dynamic>? thresholds;
+  final List<LogEntryDTO> insulinLogs;
 
   DashboardState({
     this.latestGlucose,
@@ -21,6 +23,7 @@ class DashboardState {
     this.recentMeals = const [],
     this.patient,
     this.thresholds,
+    this.insulinLogs = const [],
   });
 }
 
@@ -58,13 +61,11 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
     } 
     catch (e) {
       print('❌ Error syncing glucose to Health: $e');
-      // Don't throw - this is a non-critical background operation
     }
   }
 
   void _startPolling() {
     _refreshTimer?.cancel();
-    // Faster polling for better real-time monitoring
     _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       refreshData();
     });
@@ -77,7 +78,6 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
   }
 
   Future<void> refreshData({int historyHours = 24}) async {
-    // Keep showing old data while fetching new data (don't show loading spinner every minute)
     if (!state.hasValue) {
       state = const AsyncValue.loading();
     }
@@ -90,6 +90,7 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
         _repository.getRecentMeals(),
         _repository.getPatientProfile(),
         _repository.getPatientThresholds(),
+        _repository.getRecentInsulinLogs(), // Fetching insulin logs
       ]);
 
       final dashboardState = DashboardState(
@@ -99,11 +100,8 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
         recentMeals: results[3] as List<RecentMeal>,
         patient: results[4] as Patient?,
         thresholds: results[5] as Map<String, dynamic>?,
-
+        insulinLogs: results[6] as List<LogEntryDTO>, // Storing insulin logs
       );
-
-      // Debug print to see if new data is arriving
-      print("Dashboard Data Refreshed. Readings: ${dashboardState.history.length}");
 
       state = AsyncValue.data(dashboardState);
 

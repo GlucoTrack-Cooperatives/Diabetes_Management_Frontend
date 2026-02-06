@@ -11,13 +11,15 @@ class LogEntryDTO {
     required this.description,
     this.carbs,
     this.calories,
-  });factory LogEntryDTO.fromJson(Map<String, dynamic> json) {
+  });
+
+  factory LogEntryDTO.fromJson(Map<String, dynamic> json) {
     return LogEntryDTO(
       type: json['type'] ?? 'Unknown',
       timestamp: DateTime.parse(json['timestamp']),
       description: json['description'] ?? '',
-      carbs: json['carbs'],
-      calories: json['calories'],
+      carbs: json['carbs']?.toString(),
+      calories: json['calories']?.toString(),
     );
   }
 }

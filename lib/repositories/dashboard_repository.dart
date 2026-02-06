@@ -3,6 +3,7 @@ import '../models/patient_profile.dart';
 import '../services/api_client.dart';
 import '../services/secure_storage_service.dart';
 import '../models/dashboard_models.dart';
+import '../models/log_entry_dto.dart';
 
 final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
   return DashboardRepository(
@@ -114,6 +115,23 @@ class DashboardRepository {
     } catch (e) {
       print("Error fetching profile: $e");
       return Map<String, dynamic>();
+    }
+  }
+
+  Future<List<LogEntryDTO>> getRecentInsulinLogs() async {
+    try {
+      final patientId = await _getPatientId();
+      final response = await _client.get('/patients/$patientId/logs/recent');
+      if (response == null) return [];
+      
+      final List<dynamic> body = response;
+      return body
+          .map((json) => LogEntryDTO.fromJson(json))
+          .where((log) => log.type.toLowerCase() == 'insulin')
+          .toList();
+    } catch (e) {
+      print("Error fetching insulin logs: $e");
+      return [];
     }
   }
 
