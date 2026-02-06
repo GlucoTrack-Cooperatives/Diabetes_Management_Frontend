@@ -76,28 +76,43 @@ class _ClinicalSummarySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-            child: _SummaryTile(
-                title: 'TIR',
-                value: state.tir,
-                subtitle: 'Target (70-180)',
-                color: Colors.green)),
-        const SizedBox(width: 8),
-        Expanded(
-            child: _SummaryTile(
-                title: 'TBR',
-                value: state.tbr,
-                subtitle: 'Low (<70)',
-                color: AppColors.error)),
-        const SizedBox(width: 8),
-        Expanded(
-            child: _SummaryTile(
-                title: 'CV',
-                value: state.cv,
-                subtitle: 'Stability (Var)',
-                color: Colors.indigoAccent)),
+        Row(
+          children: [
+            Expanded(
+                child: _SummaryTile(
+                    title: 'TIR',
+                    value: state.tir,
+                    subtitle: 'Target (70-180)',
+                    color: Colors.green)),
+            const SizedBox(width: 8),
+            Expanded(
+                child: _SummaryTile(
+                    title: 'TBR',
+                    value: state.tbr,
+                    subtitle: 'Low (<70)',
+                    color: AppColors.error)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+                child: _SummaryTile(
+                    title: 'CV',
+                    value: state.cv,
+                    subtitle: 'Stability (Var)',
+                    color: Colors.indigoAccent)),
+            const SizedBox(width: 8),
+            Expanded(
+                child: _SummaryTile(
+                    title: 'GMI',
+                    value: state.gmi,
+                    subtitle: 'Est. A1c',
+                    color: Colors.purple)),
+          ],
+        ),
       ],
     );
   }
@@ -169,6 +184,24 @@ class _GlucoseTrendsSection extends StatelessWidget {
           alignment: Alignment.topRight,
           padding: const EdgeInsets.only(top: 10),
           labelResolver: (line) => '🍴',
+        ),
+      );
+    }).toList();
+
+    final insulinLines = state.insulinLogs.map((log) {
+      final hour = log.timestamp.toLocal().hour +
+          (log.timestamp.toLocal().minute / 60.0);
+
+      return VerticalLine(
+        x: hour,
+        color: Colors.blue.withOpacity(0.4),
+        strokeWidth: 2,
+        dashArray: [4, 4],
+        label: VerticalLineLabel(
+          show: true,
+          alignment: Alignment.topRight,
+          padding: const EdgeInsets.only(top: 35), // Offset slightly below meal icon
+          labelResolver: (line) => '💉',
         ),
       );
     }).toList();
@@ -286,7 +319,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
                     ),
                   ],
                 ],
-                verticalLines: mealLines,
+                verticalLines: [...mealLines, ...insulinLines],
               ),
               lineBarsData: [
                 LineChartBarData(

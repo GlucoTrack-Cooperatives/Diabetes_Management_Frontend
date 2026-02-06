@@ -15,6 +15,7 @@ class PatientAnalysisState {
   final String tir; // Time in Range
   final String tbr; // Time Below Range
   final String cv;  // Coefficient of Variation
+  final String gmi; // Glucose Management Indicator
   final List<FlSpot> glucoseSpots;
   final double averageGlucose;
   final List<LogEntryDTO> foodLogs;
@@ -27,6 +28,7 @@ class PatientAnalysisState {
     this.tir = '--',
     this.tbr = '--',
     this.cv = '--',
+    this.gmi = '--',
     this.glucoseSpots = const [],
     this.averageGlucose = 0,
     this.foodLogs = const [],
@@ -76,6 +78,7 @@ class PatientAnalysisController extends StateNotifier<PatientAnalysisState> {
         tir: stats['TIR']!,
         tbr: stats['TBR']!,
         cv: stats['CV']!,
+        gmi: stats['GMI']!,
         averageGlucose: stats['AVG'] != null ? double.parse(stats['AVG']!) : 0.0,
         glucoseSpots: spots,
         foodLogs: foodLogs,
@@ -91,7 +94,7 @@ class PatientAnalysisController extends StateNotifier<PatientAnalysisState> {
   }
 
   Map<String, String> _calculateStats(List<GlucoseReading> readings) {
-    if (readings.isEmpty) return {'TIR': 'N/A', 'TBR': 'N/A', 'CV': 'N/A', 'AVG': '0'};
+    if (readings.isEmpty) return {'TIR': 'N/A', 'TBR': 'N/A', 'CV': 'N/A', 'GMI': 'N/A', 'AVG': '0'};
 
     int total = readings.length;
     int inRange = 0;
@@ -110,6 +113,9 @@ class PatientAnalysisController extends StateNotifier<PatientAnalysisState> {
 
     double mean = sum / total;
 
+    // GMI (%) = 3.31 + 0.02392 * [mean glucose in mg/dL]
+    double gmiValue = 3.31 + (0.02392 * mean);
+
     // Calculate Standard Deviation for CV
     double sumSquaredDiff = 0;
     for (var val in values) {
@@ -122,6 +128,7 @@ class PatientAnalysisController extends StateNotifier<PatientAnalysisState> {
       'TIR': '${((inRange / total) * 100).toStringAsFixed(0)}%', //time in range
       'TBR': '${((belowRange / total) * 100).toStringAsFixed(0)}%', //time below range
       'CV': '${cv.toStringAsFixed(1)}%', // coefficient of variation
+      'GMI': '${gmiValue.toStringAsFixed(1)}%',
       'AVG': mean.toStringAsFixed(0),
     };
   }
