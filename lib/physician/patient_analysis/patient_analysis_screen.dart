@@ -1,3 +1,4 @@
+import 'package:diabetes_management_system/physician/appointments/patient_appointments_screen.dart';
 import 'package:diabetes_management_system/physician/patient_analysis/patient_analysis_controller.dart';
 import 'package:diabetes_management_system/theme/app_colors.dart';
 import 'package:diabetes_management_system/theme/app_text_styles.dart';
@@ -25,6 +26,21 @@ class PatientAnalysisScreen extends ConsumerWidget {
         title: Text(patientName, style: AppTextStyles.headline2),
         actions: [
           IconButton(
+            icon: Icon(Icons.calendar_month, color: AppColors.primary),
+            tooltip: 'Appointments & Tests',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PatientAppointmentsScreen(
+                    patientId: patientId,
+                    patientName: patientName,
+                  ),
+                ),
+              );
+            },
+          ),
+          IconButton(
               icon: Icon(Icons.refresh, color: AppColors.primary),
               onPressed: () {
                 ref
@@ -42,9 +58,9 @@ class PatientAnalysisScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _ClinicalSummarySection(state: state),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               _GlucoseTrendsSection(state: state),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               _DetailedLogsSection(state: state),
             ],
           ),
@@ -68,14 +84,14 @@ class _ClinicalSummarySection extends StatelessWidget {
                 value: state.tir,
                 subtitle: 'Target (70-180)',
                 color: Colors.green)),
-        SizedBox(width: 8),
+        const SizedBox(width: 8),
         Expanded(
             child: _SummaryTile(
                 title: 'TBR',
                 value: state.tbr,
                 subtitle: 'Low (<70)',
                 color: AppColors.error)),
-        SizedBox(width: 8),
+        const SizedBox(width: 8),
         Expanded(
             child: _SummaryTile(
                 title: 'CV',
@@ -102,7 +118,7 @@ class _SummaryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -110,7 +126,7 @@ class _SummaryTile extends StatelessWidget {
           BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 10,
-              offset: Offset(0, 4)),
+              offset: const Offset(0, 4)),
         ],
         border: Border.all(color: color.withOpacity(0.2)),
       ),
@@ -119,10 +135,10 @@ class _SummaryTile extends StatelessWidget {
           Text(title,
               style: AppTextStyles.bodyText2.copyWith(
                   fontWeight: FontWeight.bold, color: Colors.grey[600])),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(value,
               style: AppTextStyles.headline1.copyWith(color: color, fontSize: 28)),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(subtitle,
               style: AppTextStyles.bodyText2.copyWith(fontSize: 10),
               textAlign: TextAlign.center,
@@ -165,7 +181,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
           children: [
             Text('24-Hour Glucose Profile', style: AppTextStyles.headline2),
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4)),
@@ -175,10 +191,10 @@ class _GlucoseTrendsSection extends StatelessWidget {
             )
           ],
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         Container(
           height: 450,
-          padding: EdgeInsets.only(right: 16, top: 16, bottom: 8),
+          padding: const EdgeInsets.only(right: 16, top: 16, bottom: 8),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -193,9 +209,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
                   style: AppTextStyles.bodyText2))
               : LineChart(
             LineChartData(
-              // FIX 1: Enable clipping to stop drawing outside the box
-              clipData: FlClipData.all(),
-
+              clipData: const FlClipData.all(),
               gridData: FlGridData(
                 show: true,
                 drawVerticalLine: true,
@@ -206,7 +220,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
                 getDrawingVerticalLine: (value) =>
                     FlLine(color: Colors.grey.shade100, strokeWidth: 1),
               ),
-              titlesData: FlTitlesData(
+              titlesData: const FlTitlesData(
                 rightTitles:
                 AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 topTitles:
@@ -216,14 +230,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
                     showTitles: true,
                     reservedSize: 32,
                     interval: 4,
-                    getTitlesWidget: (value, meta) {
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Text('${value.toInt()}:00',
-                            style: AppTextStyles.bodyText2.copyWith(
-                                color: Colors.grey, fontSize: 10)),
-                      );
-                    },
+                    getTitlesWidget: _bottomTitles,
                   ),
                 ),
                 leftTitles: AxisTitles(
@@ -231,20 +238,13 @@ class _GlucoseTrendsSection extends StatelessWidget {
                     showTitles: true,
                     interval: 50,
                     reservedSize: 30,
-                    getTitlesWidget: (value, meta) {
-                      // Hide the '0' label if it overlaps
-                      if (value == 0) return Container();
-                      return Text('${value.toInt()}',
-                          style: AppTextStyles.bodyText2
-                              .copyWith(color: Colors.grey, fontSize: 10));
-                    },
+                    getTitlesWidget: _leftTitles,
                   ),
                 ),
               ),
               borderData: FlBorderData(show: false),
               minX: 0,
               maxX: 24,
-              // FIX 2: Lower the minimum Y to 0 so low values fit inside
               minY: 0,
               maxY: 350,
               extraLinesData: ExtraLinesData(
@@ -295,7 +295,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
                   color: AppColors.primary,
                   barWidth: 3,
                   isStrokeCapRound: true,
-                  dotData: FlDotData(show: false),
+                  dotData: const FlDotData(show: false),
                   belowBarData: BarAreaData(
                       show: true,
                       color: AppColors.primary.withOpacity(0.1),
@@ -314,6 +314,22 @@ class _GlucoseTrendsSection extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  static Widget _bottomTitles(double value, TitleMeta meta) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0),
+      child: Text('${value.toInt()}:00',
+          style: AppTextStyles.bodyText2.copyWith(
+              color: Colors.grey, fontSize: 10)),
+    );
+  }
+
+  static Widget _leftTitles(double value, TitleMeta meta) {
+    if (value == 0) return Container();
+    return Text('${value.toInt()}',
+        style: AppTextStyles.bodyText2
+            .copyWith(color: Colors.grey, fontSize: 10));
   }
 }
 
@@ -336,135 +352,84 @@ class __DetailedLogsSectionState extends State<_DetailedLogsSection>
   }
 
   @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         Container(
           decoration: BoxDecoration(
             color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: TabBar(
             controller: _tabController,
-            indicator: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.white,
-              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
-            ),
             labelColor: AppColors.primary,
             unselectedLabelColor: Colors.grey,
-            padding: EdgeInsets.all(4),
-            tabs: [
-              Tab(text: 'Food Logbook'),
-              Tab(text: 'Medication Settings'),
+            indicator: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
+            ),
+            tabs: const [
+              Tab(text: 'Insulin Logs'),
+              Tab(text: 'Meal Logs'),
             ],
           ),
         ),
-        SizedBox(height: 12),
+        const SizedBox(height: 16),
         SizedBox(
-          height: 400,
+          height: 300,
           child: TabBarView(
             controller: _tabController,
             children: [
-              _LogbookTab(foodLogs: widget.state.foodLogs),
-              _MedicationTab(settings: widget.state.derivedInsulinSettings),
+              _buildInsulinList(),
+              _buildMealList(),
             ],
           ),
         ),
       ],
     );
   }
-}
 
-class _LogbookTab extends StatelessWidget {
-  final List<dynamic> foodLogs;
-  const _LogbookTab({required this.foodLogs});
-
-  @override
-  Widget build(BuildContext context) {
-    if (foodLogs.isEmpty) {
-      return Center(
-          child: Text("No food logs found for this period",
-              style: AppTextStyles.bodyText2));
+  Widget _buildInsulinList() {
+    if (widget.state.insulinLogs.isEmpty) {
+      return const Center(child: Text("No insulin logs today"));
     }
-    return ListView.separated(
-      itemCount: foodLogs.length,
-      separatorBuilder: (c, i) => Divider(height: 1, indent: 16, endIndent: 16),
+    return ListView.builder(
+      itemCount: widget.state.insulinLogs.length,
       itemBuilder: (context, index) {
-        final log = foodLogs[index];
-        final timeStr = DateFormat('HH:mm').format(log.timestamp.toLocal());
-
-        final nutritionalInfo = [
-          if (log.carbs != null) log.carbs,
-          if (log.calories != null) log.calories
-        ].join(' • ');
-
-        return ListTile(
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          leading: Container(
-            padding: EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.restaurant_menu, color: Colors.orange, size: 24),
+        final log = widget.state.insulinLogs[index];
+        return Card(
+          child: ListTile(
+            leading: const Icon(Icons.vaccines, color: Colors.blue),
+            title: Text(log.description),
+            subtitle: Text(DateFormat('HH:mm').format(log.timestamp)),
           ),
-          title: Text(log.description,
-              style:
-              AppTextStyles.bodyText1.copyWith(fontWeight: FontWeight.bold)),
-          subtitle: Text(nutritionalInfo,
-              style: AppTextStyles.bodyText2.copyWith(color: Colors.grey[600])),
-          trailing: Text(timeStr,
-              style: AppTextStyles.bodyText2.copyWith(color: AppColors.primary)),
         );
       },
     );
   }
-}
 
-class _MedicationTab extends StatelessWidget {
-  final Map<String, String> settings;
-  const _MedicationTab({required this.settings});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SectionHeader('Detected Insulin Profile'),
-          _MedicationItem(
-              title: 'Basal Insulin', value: settings['Basal'] ?? 'Unknown'),
-          _MedicationItem(
-              title: 'Bolus Insulin', value: settings['Bolus'] ?? 'Unknown'),
-        ],
-      ),
+  Widget _buildMealList() {
+    if (widget.state.foodLogs.isEmpty) {
+      return const Center(child: Text("No meal logs today"));
+    }
+    return ListView.builder(
+      itemCount: widget.state.foodLogs.length,
+      itemBuilder: (context, index) {
+        final log = widget.state.foodLogs[index];
+        return Card(
+          child: ListTile(
+            leading: const Icon(Icons.restaurant, color: Colors.orange),
+            title: Text('${log.carbs ?? '0'}g Carbs'),
+            subtitle: Text(DateFormat('HH:mm').format(log.timestamp)),
+          ),
+        );
+      },
     );
   }
-}
-
-Widget _SectionHeader(String title) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 12.0, top: 8.0),
-    child: Text(title.toUpperCase(),
-        style: AppTextStyles.bodyText2.copyWith(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
-            color: Colors.grey)),
-  );
-}
-
-Widget _MedicationItem({required String title, required String value}) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8.0),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: AppTextStyles.bodyText1),
-        Text(value,
-            style: AppTextStyles.bodyText2.copyWith(fontWeight: FontWeight.bold)),
-      ],
-    ),
-  );
 }

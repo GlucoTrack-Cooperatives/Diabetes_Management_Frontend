@@ -18,6 +18,7 @@ class PatientAnalysisState {
   final List<FlSpot> glucoseSpots;
   final double averageGlucose;
   final List<LogEntryDTO> foodLogs;
+  final List<LogEntryDTO> insulinLogs;
   final Map<String, String> derivedInsulinSettings; // e.g., {'Basal': 'Lantus', 'Bolus': 'Novolog'}
   final PatientAlertSettings? alertSettings;
 
@@ -29,6 +30,7 @@ class PatientAnalysisState {
     this.glucoseSpots = const [],
     this.averageGlucose = 0,
     this.foodLogs = const [],
+    this.insulinLogs = const [],
     this.derivedInsulinSettings = const {},
     this.alertSettings,
   });
@@ -77,6 +79,7 @@ class PatientAnalysisController extends StateNotifier<PatientAnalysisState> {
         averageGlucose: stats['AVG'] != null ? double.parse(stats['AVG']!) : 0.0,
         glucoseSpots: spots,
         foodLogs: foodLogs,
+        insulinLogs: insulinLogs,
         derivedInsulinSettings: insulinSettings,
         alertSettings: patientProfile?.alertSettings,
       );
