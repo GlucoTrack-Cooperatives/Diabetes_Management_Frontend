@@ -206,6 +206,22 @@ class _GlucoseTrendsSection extends StatelessWidget {
       );
     }).toList();
 
+    final List<List<FlSpot>> segments = [];
+    if (state.glucoseSpots.isNotEmpty) {
+      final sortedSpots = List<FlSpot>.from(state.glucoseSpots)..sort((a, b) => a.x.compareTo(b.x));
+      List<FlSpot> currentSegment = [sortedSpots[0]];
+      for (int i = 1; i < sortedSpots.length; i++) {
+        // Break line if gap is more than 2 hours (x is in hours here)
+        if (sortedSpots[i].x - sortedSpots[i - 1].x > 2.0) {
+          segments.add(currentSegment);
+          currentSegment = [sortedSpots[i]];
+        } else {
+          currentSegment.add(sortedSpots[i]);
+        }
+      }
+      segments.add(currentSegment);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -321,27 +337,33 @@ class _GlucoseTrendsSection extends StatelessWidget {
                 ],
                 verticalLines: [...mealLines, ...insulinLines],
               ),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: state.glucoseSpots,
-                  isCurved: true,
-                  color: AppColors.primary,
-                  barWidth: 3,
-                  isStrokeCapRound: true,
-                  dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(
-                      show: true,
-                      color: AppColors.primary.withOpacity(0.1),
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary.withOpacity(0.2),
-                          AppColors.primary.withOpacity(0.0)
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      )),
+              lineBarsData: segments.map((segment) => LineChartBarData(
+                spots: segment,
+                isCurved: true,
+                color: AppColors.primary,
+                barWidth: 3,
+                isStrokeCapRound: true,
+                dotData: FlDotData(
+                  show: true,
+                  getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                    radius: 3,
+                    color: AppColors.primary,
+                    strokeWidth: 1.5,
+                    strokeColor: Colors.white,
+                  ),
                 ),
-              ],
+                belowBarData: BarAreaData(
+                    show: true,
+                    color: AppColors.primary.withOpacity(0.1),
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary.withOpacity(0.2),
+                        AppColors.primary.withOpacity(0.0)
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    )),
+              )).toList(),
             ),
           ),
         ),

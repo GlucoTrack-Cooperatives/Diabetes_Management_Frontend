@@ -398,6 +398,22 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
         ))
         .toList();
     spots.sort((a, b) => a.x.compareTo(b.x));
+
+    final List<List<FlSpot>> segments = [];
+    if (spots.isNotEmpty) {
+      List<FlSpot> currentSegment = [spots[0]];
+      for (int i = 1; i < spots.length; i++) {
+        // Break line if gap is more than 2 hours (2 * 60 * 60 * 1000 ms)
+        if (spots[i].x - spots[i - 1].x > 2 * 60 * 60 * 1000) {
+          segments.add(currentSegment);
+          currentSegment = [spots[i]];
+        } else {
+          currentSegment.add(spots[i]);
+        }
+      }
+      segments.add(currentSegment);
+    }
+
     if (spots.isNotEmpty) {
       print('🔍 First spot: x=${DateTime.fromMillisecondsSinceEpoch(spots.first.x.toInt())}, y=${spots.first.y}');
       print('🔍 Last spot: x=${DateTime.fromMillisecondsSinceEpoch(spots.last.x.toInt())}, y=${spots.last.y}');
@@ -533,20 +549,26 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
                     ],
                   ],
                 ),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: spots,
-                    isCurved: true,
-                    color: AppColors.primary,
-                    barWidth: 4,
-                    isStrokeCapRound: true,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: AppColors.primary.withOpacity(0.1),
+                lineBarsData: segments.map((segment) => LineChartBarData(
+                  spots: segment,
+                  isCurved: true,
+                  color: AppColors.primary,
+                  barWidth: 4,
+                  isStrokeCapRound: true,
+                  dotData: FlDotData(
+                    show: true,
+                    getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                      radius: 3,
+                      color: AppColors.primary,
+                      strokeWidth: 1.5,
+                      strokeColor: Colors.white,
                     ),
                   ),
-                ],
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: AppColors.primary.withOpacity(0.1),
+                  ),
+                )).toList(),
               ),
             ),
           ),
