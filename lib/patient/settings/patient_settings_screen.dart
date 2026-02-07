@@ -9,8 +9,8 @@ import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
 import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
 import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_controller.dart';
 import 'package:diabetes_management_system/patient/settings/patient_settings_controller.dart';
-import '../../models/glucose_alert_settings.dart';
-import 'alert_settings_controller.dart';
+import 'package:diabetes_management_system/patient/settings/alert_settings_controller.dart';
+import 'package:diabetes_management_system/models/glucose_alert_settings.dart';
 
 class PatientSettingsScreen extends ConsumerStatefulWidget {
   const PatientSettingsScreen({super.key});
@@ -179,7 +179,7 @@ class _PatientSettingsScreenState extends ConsumerState<PatientSettingsScreen> {
                 const SizedBox(height: 32),
                 _buildSectionHeader("Integrations"),
                 const SizedBox(height: 12),
-                _buildDexcomCard(),
+                _buildDexcomCard(data.patient!),
                 const SizedBox(height: 40),
               ],
             ),
@@ -389,20 +389,29 @@ class _PatientSettingsScreenState extends ConsumerState<PatientSettingsScreen> {
     );
   }
 
-  Widget _buildDexcomCard() {
+  Widget _buildDexcomCard(Patient patient) {
+    final bool isConnected = patient.dexcomEmail != null && patient.dexcomEmail!.isNotEmpty;
+
     return _CozyCard(
-      color: AppColors.skyBlue,
+      color: isConnected ? AppColors.mint : AppColors.skyBlue,
       child: ListTile(
         contentPadding: EdgeInsets.zero,
-        leading: const Icon(Icons.import_export, color: AppColors.primary, size: 32),
+        leading: Icon(
+          isConnected ? Icons.check_circle : Icons.import_export,
+          color: AppColors.primary,
+          size: 32,
+        ),
         title: const Text("Dexcom G6/G7", style: TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: const Text("Sync your data.", style: TextStyle(fontSize: 12)),
+        subtitle: Text(
+          isConnected ? "Connection active." : "Sync your data.",
+          style: const TextStyle(fontSize: 12),
+        ),
         trailing: CustomElevatedButton(
-          width: 120,
+          width: 130,
           height: 60,
           onPressed: _showDexcomDialog,
-          text: "Connect",
-          color: AppColors.primary,
+          text: isConnected ? "Connected" : "Connect",
+          color: isConnected ? Colors.grey[400] : AppColors.primary,
         ),
       ),
     );
