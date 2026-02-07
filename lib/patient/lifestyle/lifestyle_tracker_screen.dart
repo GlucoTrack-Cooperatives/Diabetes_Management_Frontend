@@ -375,7 +375,9 @@ class _EventLogDialogState extends ConsumerState<_EventLogDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Log Special Event'),
+      backgroundColor: Colors.white, // Ensure dialog background is clean white
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: const Text('Log Special Event', style: AppTextStyles.headline2),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -385,13 +387,35 @@ class _EventLogDialogState extends ConsumerState<_EventLogDialog> {
             const SizedBox(height: 16),
             Wrap(
               spacing: 8.0,
-              runSpacing: 4.0,
+              runSpacing: 8.0,
               children: _quickEvents.map((event) {
                 final isSelected = _selectedQuickEvent == event;
                 return ChoiceChip(
-                  label: Text(event),
+                  label: Text(
+                    event,
+                    style: TextStyle(
+                      // Darker text when selected, softer grey when not
+                      color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    ),
+                  ),
                   selected: isSelected,
-                  selectedColor: AppColors.secondary.withOpacity(0.3),
+                  showCheckmark: false, // Hides the tick mark for a cleaner bubble look
+
+                  // Selected State: Soft Primary Color (Teal/Blue)
+                  selectedColor: AppColors.primary.withOpacity(0.15),
+
+                  // Unselected State: Very light grey (using your border color as fill)
+                  backgroundColor: AppColors.background,
+
+                  // Make it a full bubble/pill shape and remove the border line
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    side: BorderSide.none, // <--- Removes the harsh line
+                  ),
+
+                  elevation: 0,
+                  pressElevation: 0,
                   onSelected: (selected) {
                     setState(() {
                       if (selected) {
@@ -406,7 +430,7 @@ class _EventLogDialogState extends ConsumerState<_EventLogDialog> {
                 );
               }).toList(),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             CustomTextFormField(controller: _eventController, labelText: 'Event Type'),
             const SizedBox(height: 12),
             CustomTextFormField(controller: _notesController, labelText: 'Notes'),
@@ -414,15 +438,22 @@ class _EventLogDialogState extends ConsumerState<_EventLogDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        ElevatedButton(
-          onPressed: () async {
-            if (_eventController.text.isNotEmpty) {
-              await ref.read(lifestyleControllerProvider.notifier).logEvent(_eventController.text, _notesController.text);
-              if (context.mounted) Navigator.pop(context);
-            }
-          },
-          child: const Text('Log'),
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary))
+        ),
+        SizedBox(
+          width: 100,
+          height: 40,
+          child: CustomElevatedButton(
+            onPressed: () async {
+              if (_eventController.text.isNotEmpty) {
+                await ref.read(lifestyleControllerProvider.notifier).logEvent(_eventController.text, _notesController.text);
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+            text: 'Log',
+          ),
         ),
       ],
     );
