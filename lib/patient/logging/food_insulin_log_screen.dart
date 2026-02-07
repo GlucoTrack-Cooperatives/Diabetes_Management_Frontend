@@ -562,7 +562,7 @@ class _RecentLogsList extends ConsumerWidget {
                   ),
                 ),
                 title: Text(log.description, style: AppTextStyles.bodyText1.copyWith(fontWeight: FontWeight.w600, fontSize: 15)),
-                subtitle: Text(DateFormat('h:mm a').format(log.timestamp), style: AppTextStyles.bodyText2),
+                subtitle: Text(DateFormat('h:mm a').format(log.timestamp.toLocal()), style: AppTextStyles.bodyText2),
                 trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary.withOpacity(0.5)),
               ),
             );

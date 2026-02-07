@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'lifestyle_controller.dart';
-import '../../models/health_event_request.dart';
+import 'package:diabetes_management_system/models/health_event_request.dart';
 
 class LifestyleTrackerScreen extends ConsumerWidget {
   const LifestyleTrackerScreen({super.key});
@@ -63,7 +63,6 @@ class _MobileLifestyleBody extends StatelessWidget {
               CustomElevatedButton(
                 onPressed: () => _showEventDialog(context),
                 text: 'Log Special Event',
-                color: AppColors.secondary,
               ),
               const SizedBox(height: 32),
               _EventHistorySection(data: data),
@@ -107,7 +106,6 @@ class _DesktopLifestyleBody extends StatelessWidget {
               child: CustomElevatedButton(
                 onPressed: () => _showEventDialog(context),
                 text: 'Log Special Event',
-                color: AppColors.secondary,
               ),
             ),
             const SizedBox(height: 40),
@@ -132,74 +130,202 @@ class _EventHistorySection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // --- Header Section with Cute Date Pill ---
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Event History', style: AppTextStyles.headline2),
-            Row(
-              children: [
-                IconButton(
-                    icon: const Icon(Icons.chevron_left),
-                    onPressed: () => controller.changeWeek(-1)
-                ),
-                Text(
-                  '${formatter.format(data.selectedWeekStart)} - ${formatter.format(weekEnd)}',
-                  style: AppTextStyles.bodyText1.copyWith(fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                    icon: const Icon(Icons.chevron_right),
-                    onPressed: () => controller.changeWeek(1)
-                ),
-              ],
+            const Text('Event History', style: AppTextStyles.headline2),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surface, // Uses your theme white
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(color: AppColors.border), // Soft border
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left_rounded, size: 20, color: AppColors.textPrimary),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    onPressed: () => controller.changeWeek(-1),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text(
+                      '${formatter.format(data.selectedWeekStart)} - ${formatter.format(weekEnd)}',
+                      style: AppTextStyles.bodyText2.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: AppColors.textPrimary
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textPrimary),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    onPressed: () => controller.changeWeek(1),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
+
+        // --- Content Section ---
         if (data.isEventsLoading)
           const Center(child: Padding(
             padding: EdgeInsets.all(20.0),
-            child: CircularProgressIndicator(),
+            child: CircularProgressIndicator(color: AppColors.primary),
           ))
         else if (data.healthEvents.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Center(child: Text('No events logged for this week')),
-          )
+          _buildEmptyState()
         else
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-                side: BorderSide(color: Colors.grey.shade200),
-                borderRadius: BorderRadius.circular(12)
-            ),
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: data.healthEvents.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final event = data.healthEvents[index];
-                return ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: AppColors.lavender,
-                    child: Icon(Icons.event_note, color: AppColors.primary, size: 20),
-                  ),
-                  title: Text(event.eventType, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(event.notes?.isNotEmpty == true ? event.notes! : 'No notes added'),
-                  trailing: Text(
-                    DateFormat('E, HH:mm').format(event.timestamp.toLocal()),
-                    style: AppTextStyles.bodyText2.copyWith(fontSize: 12),
-                  ),
-                );
-              },
-            ),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: data.healthEvents.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12), // Gap between bubbles
+            itemBuilder: (context, index) {
+              return _EventBubble(event: data.healthEvents[index]);
+            },
           ),
       ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.spa_rounded, size: 40, color: AppColors.textSecondary.withOpacity(0.5)),
+          const SizedBox(height: 8),
+          const Text(
+            'No events logged yet',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EventBubble extends StatelessWidget {
+  final HealthEventDTO event;
+
+  const _EventBubble({required this.event});
+
+  // Helper to get fitting icon and color for the icon background
+  ({Color iconBg, IconData icon}) _getStyle(String type) {
+    switch (type.toLowerCase()) {
+      case 'stress':
+        return (iconBg: const Color(0xFFFFCC80), icon: Icons.psychology_alt_rounded);
+      case 'fever':
+        return (iconBg: const Color(0xFFEF9A9A), icon: Icons.thermostat_rounded);
+      case 'illness':
+        return (iconBg: const Color(0xFF90CAF9), icon: Icons.sick_rounded);
+      case 'period':
+        return (iconBg: const Color(0xFFF48FB1), icon: Icons.water_drop_rounded);
+      case 'travel':
+        return (iconBg: const Color(0xFFA5D6A7), icon: Icons.flight_rounded);
+      case 'party':
+        return (iconBg: const Color(0xFFCE93D8), icon: Icons.celebration_rounded);
+      default:
+        return (iconBg: AppColors.border, icon: Icons.edit_note_rounded);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final style = _getStyle(event.eventType);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFA), // A slightly darker than white color (Grey 50)
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.border, // Use theme border color
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Row(
+        children: [
+          // Icon Circle - Keeps the specific color
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: style.iconBg.withOpacity(0.3), // Lighter version of icon bg
+              shape: BoxShape.circle,
+            ),
+            child: Icon(style.icon, color: AppColors.textPrimary.withOpacity(0.7), size: 24),
+          ),
+          const SizedBox(width: 16),
+
+          // Text Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.eventType,
+                  style: AppTextStyles.bodyText1.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                if (event.notes != null && event.notes!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      event.notes!,
+                      style: AppTextStyles.bodyText2.copyWith(
+                        color: AppColors.textPrimary.withOpacity(0.6),
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Time
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+                color: Colors.white, // Pure white to stand out slightly on the grey
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border.withOpacity(0.5))
+            ),
+            child: Text(
+              DateFormat('E, HH:mm').format(event.timestamp.toLocal()),
+              style: AppTextStyles.bodyText2.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
