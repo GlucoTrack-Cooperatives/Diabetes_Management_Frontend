@@ -136,14 +136,21 @@ class PatientAnalysisController extends StateNotifier<PatientAnalysisState> {
   List<FlSpot> _generateSpots(List<GlucoseReading> readings) {
     if (readings.isEmpty) return [];
 
-    // Sort by date to ensure the line is drawn correctly
+    // 1. Define the start of the window (24 hours ago)
+    final now = DateTime.now();
+    final startTime = now.subtract(const Duration(hours: 24));
+
     readings.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     return readings.map((reading) {
-      // Map time to X axis (0 - 24 hours)
-      double x = reading.timestamp.hour + (reading.timestamp.minute / 60.0);
-      double y = reading.value;
-      return FlSpot(x, y);
+      // 2. Calculate x as "Hours passed since startTime"
+      // If reading is at startTime, x = 0. If reading is 'now', x = 24.
+      final difference = reading.timestamp.difference(startTime);
+
+      // We use minutes / 60.0 to get decimal hours (e.g., 90 mins = 1.5 hours)
+      double x = difference.inMinutes / 60.0;
+
+      return FlSpot(x, reading.value);
     }).toList();
   }
 

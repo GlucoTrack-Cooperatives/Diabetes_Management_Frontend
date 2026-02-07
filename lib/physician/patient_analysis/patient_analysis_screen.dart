@@ -170,12 +170,20 @@ class _GlucoseTrendsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final startTime = now.subtract(const Duration(hours: 24));
+
+    double calculateRelativeX(DateTime timestamp) {
+      final difference = timestamp.difference(startTime);
+      return difference.inMinutes / 60.0;
+    }
+
     final mealLines = state.foodLogs.map((log) {
-      final hour = log.timestamp.toLocal().hour +
-          (log.timestamp.toLocal().minute / 60.0);
+      final x = calculateRelativeX(log.timestamp.toLocal());
+      if (x < 0 || x > 24) return null;
 
       return VerticalLine(
-        x: hour,
+        x: x,
         color: Colors.orange.withOpacity(0.4),
         strokeWidth: 2,
         dashArray: [4, 4],
@@ -186,14 +194,15 @@ class _GlucoseTrendsSection extends StatelessWidget {
           labelResolver: (line) => '🍴',
         ),
       );
-    }).toList();
+    }).whereType<VerticalLine>().toList();
 
     final insulinLines = state.insulinLogs.map((log) {
-      final hour = log.timestamp.toLocal().hour +
-          (log.timestamp.toLocal().minute / 60.0);
+      final x = calculateRelativeX(log.timestamp.toLocal());
+
+      if (x < 0 || x > 24) return null;
 
       return VerticalLine(
-        x: hour,
+        x: x,
         color: Colors.blue.withOpacity(0.4),
         strokeWidth: 2,
         dashArray: [4, 4],
@@ -204,7 +213,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
           labelResolver: (line) => '💉',
         ),
       );
-    }).toList();
+    }).whereType<VerticalLine>().toList();
 
     final List<List<FlSpot>> segments = [];
     if (state.glucoseSpots.isNotEmpty) {
@@ -269,7 +278,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
                 getDrawingVerticalLine: (value) =>
                     FlLine(color: Colors.grey.shade100, strokeWidth: 1),
               ),
-              titlesData: const FlTitlesData(
+              titlesData: FlTitlesData(
                 rightTitles:
                 AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 topTitles:
@@ -279,7 +288,9 @@ class _GlucoseTrendsSection extends StatelessWidget {
                     showTitles: true,
                     reservedSize: 32,
                     interval: 4,
-                    getTitlesWidget: _bottomTitles,
+                    getTitlesWidget: (value, meta) {
+                      return _bottomTitles(value, meta, startTime);
+                    },
                   ),
                 ),
                 leftTitles: AxisTitles(
@@ -371,12 +382,14 @@ class _GlucoseTrendsSection extends StatelessWidget {
     );
   }
 
-  static Widget _bottomTitles(double value, TitleMeta meta) {
+  static Widget _bottomTitles(double value, TitleMeta meta, DateTime startTime) {
+    final timeForLabel = startTime.add(Duration(minutes: (value * 60).toInt()));
     return Padding(
       padding: const EdgeInsets.only(top: 8.0),
-      child: Text('${value.toInt()}:00',
-          style: AppTextStyles.bodyText2.copyWith(
-              color: Colors.grey, fontSize: 10)),
+      child: Text(
+        DateFormat('HH:mm').format(timeForLabel),
+        style: AppTextStyles.bodyText2.copyWith(color: Colors.grey, fontSize: 10),
+      ),
     );
   }
 
