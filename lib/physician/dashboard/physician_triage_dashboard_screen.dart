@@ -136,6 +136,28 @@ class _PatientList extends ConsumerWidget {
     return glucose < 70 || glucose > 250;
   }
 
+  // Helper function to get the trend description from its number
+  String _getGlucoseTrendLabel(dynamic trendValue) {
+    // Handle if the value from the backend is a String
+    final int value = trendValue is String ? int.tryParse(trendValue) ?? 8 : (trendValue as int? ?? 8);
+
+    const trendMap = {
+      0: 'None',
+      1: 'Rising Rapidly', // Changed for clarity
+      2: 'Rising',
+      3: 'Rising Slowly', // Changed for clarity
+      4: 'Stable',
+      5: 'Falling Slowly', // Changed for clarity
+      6: 'Falling',
+      7: 'Falling Rapidly', // Changed for clarity
+      8: 'Not Computable',
+      9: 'Rate Out of Range',
+    };
+
+    return trendMap[value] ?? 'N/A';
+  }
+
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final patientsAsync = ref.watch(physicianPatientsListProvider);
@@ -218,7 +240,7 @@ class _PatientList extends ConsumerWidget {
                         ),
                         if (patient.latestGlucoseValue != null)
                           Text(
-                            'Latest Glucose: ${patient.latestGlucoseValue} mg/dL (${patient.latestGlucoseTrend})',
+                            'Latest Glucose: ${patient.latestGlucoseValue} mg/dL (${_getGlucoseTrendLabel(patient.latestGlucoseTrend)})',
                             style: TextStyle(
                               color: isHighRisk ? Colors.red : Colors.black87,
                               fontWeight:

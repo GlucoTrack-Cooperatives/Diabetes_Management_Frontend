@@ -5,6 +5,7 @@ import 'package:diabetes_management_system/models/patient_profile.dart';
 import 'package:diabetes_management_system/patient/dashboard/patient_dashboard_controller.dart';
 import 'package:diabetes_management_system/theme/app_colors.dart';
 import 'package:diabetes_management_system/theme/app_text_styles.dart';
+import 'package:diabetes_management_system/utils/glucose_utils.dart';
 import 'package:diabetes_management_system/utils/responsive_layout.dart';
 import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
 import 'package:flutter/material.dart';
@@ -163,9 +164,7 @@ Widget _buildHeader(Patient? patient) {
 }
 
 Widget _buildGlucoseCard(GlucoseReading? glucose, GlucoseUnit unit) {
-  if (glucose == null) return const _CozyCard(child: Center(child: Text("No Data")));
-
-  return _CozyCard(
+  if (glucose == null) return const _CozyCard(child: Center(child: Text("No Data")));return _CozyCard(
     color: AppColors.skyBlue,
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -176,13 +175,14 @@ Widget _buildGlucoseCard(GlucoseReading? glucose, GlucoseUnit unit) {
             const Text('LATEST GLUCOSE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary)),
             const SizedBox(height: 8),
             Text(
-              unit.formatValue(glucose.value),  // Use unit preference
+              unit.formatValue(glucose.value),
               style: AppTextStyles.headline1.copyWith(fontSize: 40),
             ),
-            Text(unit.displayName, style: AppTextStyles.bodyText2),  // Dynamic unit label
+            Text(unit.displayName, style: AppTextStyles.bodyText2),
           ],
         ),
-        _TrendIndicator(trend: glucose.trend ?? ''),
+        // Pass the trend value (which is a number as a string from your API)
+        _TrendIndicator(trend: glucose.trend?.toString() ?? '0'),
       ],
     ),
   );
@@ -228,19 +228,41 @@ Widget _statItem(String value, String label, Color color) {
 }
 
 class _TrendIndicator extends StatelessWidget {
-  final String trend;
-  const _TrendIndicator({required this.trend});
+  final String trend; // This is the numeric string from the API (e.g., "4")
 
-  @override
+  const _TrendIndicator({required this.trend});  @override
   Widget build(BuildContext context) {
-    IconData icon;
-    Color color;
-    switch (trend.toUpperCase()) {
-      case 'RISING': icon = Icons.trending_up_rounded; color = AppColors.primary; break;
-      case 'FALLING': icon = Icons.trending_down_rounded; color = AppColors.secondary; break;
-      default: icon = Icons.trending_flat_rounded; color = AppColors.textSecondary;
+    // 1. Convert the numeric string to our Enum using your utility
+    final trendEnum = GlucoseTrend.fromInt(trend);
+
+    // 2. Determine color based on the trend
+    Color iconColor;
+    if (trendEnum.value >= 1 && trendEnum.value <= 3) {
+      iconColor = AppColors.primary; // Rising
+    } else if (trendEnum.value >= 5 && trendEnum.value <= 7) {
+      iconColor = AppColors.secondary; // Falling
+    } else {
+      iconColor = AppColors.textSecondary; // Stable or N/A
     }
-    return Icon(icon, size: 48, color: color);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+            trendEnum.icon,
+            size: 48,
+            color: iconColor
+        ),
+        Text(
+          trendEnum.label,
+          style: TextStyle(
+            fontSize: 10,
+            color: iconColor.withOpacity(0.8),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
   }
 }
 
