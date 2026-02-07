@@ -24,17 +24,11 @@ class DashboardRepository {
     return id;
   }
 
-  // --- 1. LATEST GLUCOSE ---
   Future<GlucoseReading?> getLatestGlucose() async {
     try {
       final patientId = await _getPatientId();
       final response = await _client.get('/patients/$patientId/dashboard/glucose/latest');
-
-      // Check for null response
-      if (response == null) {
-        return null;
-      }
-
+      if (response == null) return null;
       return GlucoseReading.fromJson(response);
     } catch (e) {
       print("Error fetching latest glucose: $e");
@@ -42,33 +36,30 @@ class DashboardRepository {
     }
   }
 
-  // --- 2. GLUCOSE HISTORY ---
   Future<List<GlucoseReading>> getGlucoseHistory(int hours) async {
     try {
       final patientId = await _getPatientId();
       final response = await _client.get('/patients/$patientId/dashboard/glucose/history');
 
-      // FIX: Check for null response
       if (response == null) return [];
+      
+      // DEBUG: Print raw response to compare with model
+      print("RAW Glucose History Response: $response");
 
       return (response as List).map((e) => GlucoseReading.fromJson(e)).toList();
-    } catch (e) {
+    } catch (e, stack) {
+      // Print the stack trace to see EXACTLY which field failed
       print("Error fetching glucose history: $e");
+      print(stack); 
       return [];
     }
   }
 
-  // --- 3. DASHBOARD STATS ---
   Future<DashboardStats?> getStats() async {
     try {
       final patientId = await _getPatientId();
       final response = await _client.get('/patients/$patientId/dashboard/stats');
-
-      // FIX: Check for null response
-      if (response == null) {
-        return null;
-      }
-
+      if (response == null) return null;
       return DashboardStats.fromJson(response);
     } catch (e) {
       print("Error fetching dashboard stats: $e");
@@ -80,12 +71,10 @@ class DashboardRepository {
     try {
       final patientId = await _getPatientId();
       final response = await _client.get('/patients/$patientId/dashboard/recent-meals');
-
-      // Backend returns List<LogEntryDTO>
       return (response as List).map((e) => RecentMeal.fromJson(e)).toList();
     } catch (e) {
       print("Error fetching meals: $e");
-      return []; // Return empty list on error to avoid crashing UI
+      return [];
     }
   }
 
@@ -93,9 +82,7 @@ class DashboardRepository {
     try {
       final patientId = await _getPatientId();
       final response = await _client.get('/patients/$patientId');
-
       if (response == null) return null;
-
       return Patient.fromJson(response);
     } catch (e) {
       print("Error fetching profile: $e");
@@ -106,15 +93,11 @@ class DashboardRepository {
   Future<Map<String, dynamic>> getPatientThresholds() async {
     try {
       final response = await _client.get('/patients/settings');
-
-      if (response is Map<String, dynamic>) {
-        return response;
-      }
-      print("response for thresholds: $response");
+      if (response is Map<String, dynamic>) return response;
       return response.data as Map<String, dynamic>;
     } catch (e) {
-      print("Error fetching profile: $e");
-      return Map<String, dynamic>();
+      print("Error fetching thresholds: $e");
+      return {};
     }
   }
 
@@ -123,7 +106,6 @@ class DashboardRepository {
       final patientId = await _getPatientId();
       final response = await _client.get('/patients/$patientId/logs/recent');
       if (response == null) return [];
-      
       final List<dynamic> body = response;
       return body
           .map((json) => LogEntryDTO.fromJson(json))
@@ -134,5 +116,4 @@ class DashboardRepository {
       return [];
     }
   }
-
 }

@@ -45,12 +45,20 @@ class _PatientMainScreenState extends ConsumerState<PatientMainScreen> {
   }
 
   Future<void> _handleLogout() async {
-    await ref.read(loginControllerProvider.notifier).logout();
-    if (mounted) {
+    try {
+      // 2. Perform the logout logic
+      await ref.read(loginControllerProvider.notifier).logout();
+
+      // 3. Check if the widget is still in the tree before navigating
+      if (!mounted) return;
+
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
             (route) => false,
       );
+    } catch (e) {
+      // Handle potential logout errors
+      debugPrint("Logout error: $e");
     }
   }
 

@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "diabetes.management"
+    namespace = "com.example.diabetes_management_system"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -25,7 +25,7 @@ android {
 
     defaultConfig {
         // Updated to match Firebase project configuration
-        applicationId = "diabetes.management"
+        applicationId = "com.example.diabetes_management_system"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 28
