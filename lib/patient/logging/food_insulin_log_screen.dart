@@ -39,21 +39,22 @@ class _MobileLogBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Expanded(
-            flex: 6,
-            child: _LogInputSection()
-        ),
-        Container(
-          height: 8,
-          color: AppColors.background,
-        ),
-        const Expanded(
-            flex: 4,
-            child: _RecentLogsSection(),
-        ),
-      ],
+    // 1. Wrap the Column in a SingleChildScrollView
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // 2. Remove 'Expanded' so this takes up as much height as it needs
+          const _LogInputSection(),
+
+          Container(
+            height: 15,
+            color: AppColors.background,
+          ),
+
+          // 3. Remove 'Expanded' here as well
+          const _RecentLogsSection(),
+        ],
+      ),
     );
   }
 }
@@ -109,6 +110,7 @@ class __LogInputSectionState extends State<_LogInputSection> with SingleTickerPr
               boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 10)],
             ),
             child: TabBar(
+              dividerColor: Colors.transparent,
               controller: _tabController,
               indicator: BoxDecoration(
                 borderRadius: BorderRadius.circular(25),
@@ -125,7 +127,8 @@ class __LogInputSectionState extends State<_LogInputSection> with SingleTickerPr
             ),
           ),
         ),
-        Expanded(
+        SizedBox(
+          height: 640, // Adjust this value to fit your longest form
           child: TabBarView(
             controller: _tabController,
             children: [
@@ -234,7 +237,7 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
     final state = ref.watch(foodLogControllerProvider);
     final bool isLoading = state is FoodLogLoading || state is FoodAnalysisLoading;
 
-    return SingleChildScrollView(
+    return Padding(
       padding: EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -459,7 +462,7 @@ class _InsulinLogViewState extends ConsumerState<_InsulinLogView> {
     final medicationsAsync = ref.watch(medicationsProvider);
     final state = ref.watch(foodLogControllerProvider);
 
-    return SingleChildScrollView(
+    return Padding(
       padding: EdgeInsets.all(16),
       child: Card(
         elevation: 0,
@@ -514,7 +517,8 @@ class _RecentLogsSection extends StatelessWidget {
             ],
           ),
           SizedBox(height: 16),
-          const Expanded(child: _RecentLogsList()),
+          const _RecentLogsList(),
+          SizedBox(height: 20),
         ],
       ),
     );
@@ -535,6 +539,9 @@ class _RecentLogsList extends ConsumerWidget {
         if (logs.isEmpty) return Center(child: Text("No logs yet today."));
 
         return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
           itemCount: logs.length,
           itemBuilder: (context, index) {
             final log = logs[index];
