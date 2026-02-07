@@ -28,12 +28,10 @@ class DashboardState {
 }
 
 final dashboardControllerProvider = StateNotifierProvider<DashboardController, AsyncValue<DashboardState>>((ref) {
-  final controller = DashboardController(
+  return DashboardController(
     ref.watch(dashboardRepositoryProvider),
     ref.watch(healthApiServiceProvider),
   );
-  ref.onDispose(() => controller.dispose());
-  return controller;
 });
 
 class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
@@ -49,6 +47,7 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
   Future<void> _syncGlucoseToHealth(List<GlucoseReading> readings) async {
     try {
       for (final reading in readings) {
+        if (!mounted) return;
         final success = await _healthService.writeBloodGlucose(
           reading.value,
           reading.timestamp,
@@ -78,6 +77,8 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
   }
 
   Future<void> refreshData({int historyHours = 24}) async {
+    if (!mounted) return;
+
     if (!state.hasValue) {
       state = const AsyncValue.loading();
     }
@@ -90,8 +91,10 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
         _repository.getRecentMeals(),
         _repository.getPatientProfile(),
         _repository.getPatientThresholds(),
-        _repository.getRecentInsulinLogs(), // Fetching insulin logs
+        _repository.getRecentInsulinLogs(),
       ]);
+
+      if (!mounted) return;
 
       final dashboardState = DashboardState(
         latestGlucose: results[0] as GlucoseReading?,
@@ -100,7 +103,7 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
         recentMeals: results[3] as List<RecentMeal>,
         patient: results[4] as Patient?,
         thresholds: results[5] as Map<String, dynamic>?,
-        insulinLogs: results[6] as List<LogEntryDTO>, // Storing insulin logs
+        insulinLogs: results[6] as List<LogEntryDTO>,
       );
 
       state = AsyncValue.data(dashboardState);
@@ -110,7 +113,7 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
       }
     } catch (e, stack) {
       print("Error refreshing dashboard: $e");
-      if (!state.hasValue) {
+      if (mounted && !state.hasValue) {
         state = AsyncValue.error(e, stack);
       }
     }
