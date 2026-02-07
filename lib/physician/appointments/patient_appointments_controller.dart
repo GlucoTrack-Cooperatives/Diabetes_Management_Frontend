@@ -48,7 +48,6 @@ class PatientAppointmentsController extends StateNotifier<AsyncValue<void>> {
             // Find the chat thread for this patient
             final thread = threads.firstWhere(
               (t) => t.id.contains(_patientId) || t.participantName.contains(_patientId),
-              orElse: () => threads.first,
             );
             
             final nextDate = date.add(type.frequency);
