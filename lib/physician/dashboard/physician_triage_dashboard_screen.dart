@@ -161,6 +161,7 @@ class _PatientList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final patientsAsync = ref.watch(physicianPatientsListProvider);
+    final searchQuery = ref.watch(patientSearchQueryProvider);
 
     return Padding(
       padding: EdgeInsets.all(isDesktop ? 24.0 : 16.0),
@@ -168,13 +169,22 @@ class _PatientList extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error loading patients: $err')),
         data: (patients) {
-          if (patients.isEmpty) {
+          final filteredPatients = patients.where((patient) {
+            final nameMatch = patient.fullName.toLowerCase().contains(searchQuery.toLowerCase());
+            // You can add email matching here if your model has it
+            return nameMatch;
+          }).toList();
+
+          if (filteredPatients.isEmpty) {
+            if (searchQuery.isNotEmpty) {
+              return const Center(child: Text("No patients found matching your search."));
+            }
             return const Center(
               child: Text("No patients assigned yet. Click 'Add Patient' to start."),
             );
           }
 
-          final sortedPatients = List.from(patients);
+          final sortedPatients = List.from(filteredPatients);
           sortedPatients.sort((a, b) {
             final aRisk = _isHighRisk(a.latestGlucoseValue);
             final bRisk = _isHighRisk(b.latestGlucoseValue);
