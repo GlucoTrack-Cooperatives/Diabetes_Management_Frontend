@@ -41,6 +41,8 @@ class _PhysicianChatListState extends ConsumerState<PhysicianChatList> {
                   .where((t) => t.participantName.toLowerCase().contains(searchQuery.toLowerCase()))
                   .toList();
 
+              filteredThreads.sort((a, b) => b.lastMessageTime.compareTo(a.lastMessageTime));
+
               if (filteredThreads.isEmpty) {
                 return const Center(child: Text("No chats found"));
               }
