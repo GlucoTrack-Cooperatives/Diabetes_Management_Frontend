@@ -480,7 +480,7 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
         const SizedBox(height: 20),
         _CozyCard(
           child: SizedBox(
-            height: 250,
+            height: 260,
             child: LineChart(
               LineChartData(
                 lineTouchData: LineTouchData(
@@ -502,14 +502,48 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
                 titlesData: FlTitlesData(
                   rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40, // 1. Allocates 40px width for the Y-axis column
+                      getTitlesWidget: (value, meta) {
+                        if (value == 0 || value > maxY) return const SizedBox.shrink(); // Hide 0 and outliers
+
+                        return SideTitleWidget(
+                          meta: meta,
+                          space: 12, // 2. Pushes the text 12px away from the chart line (to the left)
+                          child: Text(
+                            value.toInt().toString(), // Format this if you need decimals for mmol/L
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       interval: interval,
+                      reservedSize: 42,
                       getTitlesWidget: (value, meta) {
                         if (value < minX || value > maxX) return const SizedBox.shrink();
                         final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
-                        return Text(DateFormat('HH:mm').format(date), style: const TextStyle(fontSize: 10, color: AppColors.textSecondary));
+                        return SideTitleWidget(
+                          meta: meta,
+                          space: 20,
+                          child: Text(
+                              DateFormat('HH:mm').format(date),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                          ),
+                        );
                       },
                     ),
                   ),
