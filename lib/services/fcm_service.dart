@@ -69,7 +69,24 @@ class FcmService {
   /// Get the current FCM token from Firebase
   Future<String?> getToken() async {
     try {
-      String? token = await _firebaseMessaging.getToken();
+      String? token;
+
+      // For web, we need to provide VAPID key
+      if (kIsWeb) {
+        // IMPORTANT: Replace this with your actual VAPID key from Firebase Console
+        // Go to: Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+        // Generate a new key pair if you don't have one
+        const String vapidKey = 'YOUR_VAPID_KEY_HERE';
+
+        // For now, get token without VAPID (will need to be configured)
+        token = await _firebaseMessaging.getToken(
+          vapidKey: vapidKey.contains('YOUR_VAPID') ? null : vapidKey,
+        );
+      } else {
+        // For mobile platforms (Android/iOS)
+        token = await _firebaseMessaging.getToken();
+      }
+
       if (kDebugMode) {
         print('FCM Token: $token');
       }
