@@ -156,7 +156,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.min, // Hug content
           children: [
             Text(
@@ -167,15 +167,12 @@ class _ChatViewState extends ConsumerState<ChatView> {
               ),
             ),
             const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Text(
+            Text(
                 DateFormat('HH:mm').format(msg.timestamp.toLocal()),
                 style: TextStyle(
                   fontSize: 10,
                   color: isMe ? Colors.white.withOpacity(0.7) : Colors.grey.shade500,
                 ),
-              ),
             ),
           ],
         ),
