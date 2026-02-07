@@ -39,7 +39,7 @@ class DashboardRepository {
   Future<List<GlucoseReading>> getGlucoseHistory(int hours) async {
     try {
       final patientId = await _getPatientId();
-      final response = await _client.get('/patients/$patientId/dashboard/glucose/history');
+      final response = await _client.get('/patients/$patientId/dashboard/glucose/history?hours=$hours');
 
       if (response == null) return [];
       
