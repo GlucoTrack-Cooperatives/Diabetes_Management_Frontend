@@ -249,10 +249,14 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
 
           // Barcode Manual Entry
           if (_isBarcodeMode) ...[
-            CustomTextFormField(
-              labelText: 'Manual Barcode',
-              controller: _barcodeInputController,
-              keyboardType: TextInputType.number,
+            // Wrapped in Padding to match the Card's internal padding (20.0)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: CustomTextFormField(
+                labelText: 'Manual Barcode',
+                controller: _barcodeInputController,
+                keyboardType: TextInputType.number,
+              ),
             ),
             SizedBox(height: 16),
           ],
