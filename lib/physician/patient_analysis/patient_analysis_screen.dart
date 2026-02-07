@@ -467,26 +467,52 @@ class __DetailedLogsSectionState extends State<_DetailedLogsSection>
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // --- 1. Custom Bubble Tab Bar ---
         Container(
+          height: 50,
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.grey.shade100, // Light grey background for the track
+            borderRadius: BorderRadius.circular(25), // Fully rounded edges
           ),
-          child: TabBar(
-            controller: _tabController,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: Colors.grey,
-            indicator: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(4.0), // Space between track and bubble
+            child: TabBar(
+              controller: _tabController,
+
+              // This creates the "Bubble" effect
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(21), // Matches container radius
+                color: AppColors.primary, // Color of the selected bubble
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              indicatorSize: TabBarIndicatorSize.tab, // Bubble fills the tab width
+              dividerColor: Colors.transparent, // Hides the ugly bottom line
+
+              // Text Colors
+              labelColor: Colors.white, // Selected text color
+              unselectedLabelColor: Colors.grey.shade600, // Unselected text color
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+
+              tabs: const [
+                Tab(text: 'Insulin Logs'),
+                Tab(text: 'Meal Logs'),
+              ],
             ),
-            tabs: const [
-              Tab(text: 'Insulin Logs'),
-              Tab(text: 'Meal Logs'),
-            ],
           ),
         ),
+
         const SizedBox(height: 16),
+
+        // --- 2. Tab Views ---
         SizedBox(
           height: 300,
           child: TabBarView(
@@ -503,16 +529,32 @@ class __DetailedLogsSectionState extends State<_DetailedLogsSection>
 
   Widget _buildInsulinList() {
     if (widget.state.insulinLogs.isEmpty) {
-      return const Center(child: Text("No insulin logs today"));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.vaccines_outlined, size: 48, color: Colors.grey.shade300),
+            const SizedBox(height: 8),
+            Text("No insulin logs today", style: TextStyle(color: Colors.grey.shade500)),
+          ],
+        ),
+      );
     }
     return ListView.builder(
       itemCount: widget.state.insulinLogs.length,
       itemBuilder: (context, index) {
         final log = widget.state.insulinLogs[index];
         return Card(
+          elevation: 0,
+          color: Colors.blue.shade50, // Subtle blue tint for insulin
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: const Icon(Icons.vaccines, color: Colors.blue),
-            title: Text(log.description),
+            leading: const CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.vaccines, color: Colors.blue, size: 20),
+            ),
+            title: Text(log.description, style: const TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text(DateFormat('HH:mm').format(log.timestamp)),
           ),
         );
@@ -522,16 +564,32 @@ class __DetailedLogsSectionState extends State<_DetailedLogsSection>
 
   Widget _buildMealList() {
     if (widget.state.foodLogs.isEmpty) {
-      return const Center(child: Text("No meal logs today"));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.restaurant_outlined, size: 48, color: Colors.grey.shade300),
+            const SizedBox(height: 8),
+            Text("No meal logs today", style: TextStyle(color: Colors.grey.shade500)),
+          ],
+        ),
+      );
     }
     return ListView.builder(
       itemCount: widget.state.foodLogs.length,
       itemBuilder: (context, index) {
         final log = widget.state.foodLogs[index];
         return Card(
+          elevation: 0,
+          color: Colors.orange.shade50, // Subtle orange tint for meals
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: const Icon(Icons.restaurant, color: Colors.orange),
-            title: Text('${log.carbs ?? '0'}g Carbs'),
+            leading: const CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.restaurant, color: Colors.orange, size: 20),
+            ),
+            title: Text('${log.carbs ?? '0'}g Carbs', style: const TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text(DateFormat('HH:mm').format(log.timestamp)),
           ),
         );
