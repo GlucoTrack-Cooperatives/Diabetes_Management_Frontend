@@ -617,7 +617,7 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
                     getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
                       radius: 3,
                       color: AppColors.primary,
-                      strokeWidth: 1.5,
+                      strokeWidth: 0.5,
                       strokeColor: Colors.white,
                     ),
                   ),

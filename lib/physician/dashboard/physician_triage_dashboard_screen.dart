@@ -227,12 +227,33 @@ class _PatientList extends ConsumerWidget {
                   ),
                   title: Row(
                     children: [
-                      Text(
-                        '${patient.fullName} (${patient.age}yo)',
-                        style: AppTextStyles.headline2,
+                      // 1. NAME: Wrapped in Flexible so it shrinks if needed
+                      Flexible(
+                        child: Text(
+                          patient.fullName,
+                          style: AppTextStyles.headline2,
+                          overflow: TextOverflow.ellipsis, // Adds "..." if name is too long
+                          maxLines: 1,
+                        ),
                       ),
+
+                      // 2. AGE: Not wrapped, so it will ALWAYS be visible
+                      // We add a small space before it so it doesn't touch the name
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4.0),
+                        child: Text(
+                          '(${patient.age}yo)',
+                          // Optional: Make age slightly lighter or smaller to distinguish from name
+                          style: AppTextStyles.headline2.copyWith(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.normal
+                          ),
+                        ),
+                      ),
+
                       const SizedBox(width: 8),
-                      // --- UI: RISK TAGS ---
+
+                      // 3. BADGE: Always visible
                       if (isHighRisk)
                         _buildBadge("CRITICAL", Colors.red)
                       else if (!patient.isPhysicianConfirmed)
