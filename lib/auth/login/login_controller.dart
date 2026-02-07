@@ -12,7 +12,7 @@ final loginControllerProvider = StateNotifierProvider<LoginController, AsyncValu
     ref.watch(authRepositoryProvider),
     ref.watch(storageServiceProvider),
     ref.watch(fcmServiceProvider),
-    ref, // Pass ref to handle invalidation
+    ref,
   );
 });
 
@@ -29,8 +29,17 @@ class LoginController extends StateNotifier<AsyncValue<void>> {
     state = await AsyncValue.guard(() async {
       final request = LoginRequest(email: email, password: password);
       final result = await _repository.login(request);
+      
+      // 1. Save new credentials
       await _storageService.saveCredentials(result.token, result.role, result.userId);
+      
+      // 2. Register FCM
       await _fcmService.registerToken();
+
+      // 3. IMPORTANT: Invalidate providers AFTER saving credentials 
+      // to ensure they fetch data for the NEW user.
+      _ref.invalidate(dashboardControllerProvider);
+      _ref.invalidate(physicianPatientsListProvider);
     });
   }
 
@@ -38,19 +47,15 @@ class LoginController extends StateNotifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
 
     try {
-      // 1. Unregister FCM token
       await _fcmService.unregisterToken();
-      
-      // 2. Clear secure storage
       await _storageService.clearAll();
 
-      // 3. IMPORTANT: Invalidate all providers to clear old user data from memory
+      // Clear memory state
       _ref.invalidate(dashboardControllerProvider);
       _ref.invalidate(physicianPatientsListProvider);
       
       state = const AsyncValue.data(null);
     } catch (e, stack) {
-      // Even if unregister fails, we still want to clear local storage
       await _storageService.clearAll();
       state = AsyncValue.error(e, stack);
     }
