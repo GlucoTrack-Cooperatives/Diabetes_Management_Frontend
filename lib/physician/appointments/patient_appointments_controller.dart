@@ -45,10 +45,14 @@ class PatientAppointmentsController extends StateNotifier<AsyncValue<void>> {
         try {
           final threads = await _chatRepository.getChatThreads();
           if (threads.isNotEmpty) {
+            print('DEBUG: Comparing against _patientId: $_patientId');
+            for (var t in threads) {
+              print('DEBUG: Thread ID: ${t.id}, Participant: ${t.participantName}, Patient ID in thread: ${t.patientId}');
+            }
+
             // Find the chat thread for this patient
             final thread = threads.firstWhere(
-              (t) => t.id.contains(_patientId) || t.participantName.contains(_patientId),
-              orElse: () => threads.first,
+              (t) => t.patientId == _patientId,
             );
             
             final nextDate = date.add(type.frequency);

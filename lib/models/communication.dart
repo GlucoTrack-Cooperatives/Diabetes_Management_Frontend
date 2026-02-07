@@ -38,6 +38,7 @@ class ChatThread {
   final String id;
   final String physicianName;
   final String participantName;
+  final String patientId;
   final String lastMessage;
   final DateTime lastMessageTime;
 
@@ -45,6 +46,7 @@ class ChatThread {
     required this.id,
     required this.physicianName,
     required this.participantName,
+    required this.patientId,
     required this.lastMessage,
     required this.lastMessageTime,
   });
@@ -54,6 +56,7 @@ class ChatThread {
       id: json['id'] ?? '',
       physicianName: json['physicianName'] ?? '',
       participantName: json['participantName'] ?? '',
+      patientId: json['patientId'] ?? '',
       lastMessage: json['lastMessage'] ?? '',
       lastMessageTime: json['lastMessageTime'] != null 
           ? DateTime.parse(json['lastMessageTime']) 
