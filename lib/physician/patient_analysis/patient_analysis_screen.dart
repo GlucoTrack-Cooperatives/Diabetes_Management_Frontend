@@ -164,9 +164,16 @@ class _SummaryTile extends StatelessWidget {
   }
 }
 
-class _GlucoseTrendsSection extends StatelessWidget {
+class _GlucoseTrendsSection extends StatefulWidget {
   final PatientAnalysisState state;
   const _GlucoseTrendsSection({required this.state});
+
+  @override
+  State<_GlucoseTrendsSection> createState() => _GlucoseTrendsSectionState();
+}
+
+class _GlucoseTrendsSectionState extends State<_GlucoseTrendsSection> {
+  String _selectedRange = '24H';
 
   @override
   Widget build(BuildContext context) {
@@ -178,9 +185,19 @@ class _GlucoseTrendsSection extends StatelessWidget {
       return difference.inMinutes / 60.0;
     }
 
-    final mealLines = state.foodLogs.map((log) {
+    double minX = 0;
+    double maxX = 24;
+    double xInterval = 4; // Grid lines every 4 hours
+
+    if (_selectedRange == '4H') {
+      minX = 20; // Show from hour 20 to 24 (the last 4 hours)
+      maxX = 24;
+      xInterval = 1; // Grid lines every 1 hour for better detail
+    }
+
+    final mealLines = widget.state.foodLogs.map((log) {
       final x = calculateRelativeX(log.timestamp.toLocal());
-      if (x < 0 || x > 24) return null;
+      if (x < minX || x > maxX) return null;
 
       return VerticalLine(
         x: x,
@@ -196,10 +213,9 @@ class _GlucoseTrendsSection extends StatelessWidget {
       );
     }).whereType<VerticalLine>().toList();
 
-    final insulinLines = state.insulinLogs.map((log) {
+    final insulinLines = widget.state.insulinLogs.map((log) {
       final x = calculateRelativeX(log.timestamp.toLocal());
-
-      if (x < 0 || x > 24) return null;
+      if (x < minX || x > maxX) return null;
 
       return VerticalLine(
         x: x,
@@ -216,8 +232,9 @@ class _GlucoseTrendsSection extends StatelessWidget {
     }).whereType<VerticalLine>().toList();
 
     final List<List<FlSpot>> segments = [];
-    if (state.glucoseSpots.isNotEmpty) {
-      final sortedSpots = List<FlSpot>.from(state.glucoseSpots)..sort((a, b) => a.x.compareTo(b.x));
+    if (widget.state.glucoseSpots.isNotEmpty) {
+      final sortedSpots = List<FlSpot>.from(widget.state.glucoseSpots)
+        ..sort((a, b) => a.x.compareTo(b.x));
       List<FlSpot> currentSegment = [sortedSpots[0]];
       for (int i = 1; i < sortedSpots.length; i++) {
         // Break line if gap is more than 2 hours (x is in hours here)
@@ -234,19 +251,39 @@ class _GlucoseTrendsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // --- Header Row with Toggle ---
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('24-Hour Glucose Profile', style: AppTextStyles.headline2),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4)),
-              child: Text("Avg: ${state.averageGlucose.toInt()} mg/dL",
-                  style: AppTextStyles.bodyText2.copyWith(
-                      color: AppColors.primary, fontWeight: FontWeight.bold)),
-            )
+            Text('Glucose Profile', style: AppTextStyles.headline2),
+            // Toggle Buttons
+            Row(
+              children: ['4H', '24H'].map((label) {
+                final isSelected = _selectedRange == label;
+                return Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: InkWell(
+                    onTap: () => setState(() => _selectedRange = label),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary : Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? Colors.white : Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -261,7 +298,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
               BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)
             ],
           ),
-          child: state.glucoseSpots.isEmpty
+          child: widget.state.glucoseSpots.isEmpty
               ? Center(
               child: Text("No glucose data for the last 24h",
                   style: AppTextStyles.bodyText2))
@@ -272,7 +309,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
                 show: true,
                 drawVerticalLine: true,
                 horizontalInterval: 50,
-                verticalInterval: 4,
+                verticalInterval: xInterval,
                 getDrawingHorizontalLine: (value) => FlLine(
                     color: Colors.grey.shade100, strokeWidth: 1),
                 getDrawingVerticalLine: (value) =>
@@ -289,6 +326,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
                     reservedSize: 32,
                     interval: 4,
                     getTitlesWidget: (value, meta) {
+                      if (value < minX || value > maxX) return const SizedBox.shrink();
                       return _bottomTitles(value, meta, startTime);
                     },
                   ),
@@ -303,8 +341,8 @@ class _GlucoseTrendsSection extends StatelessWidget {
                 ),
               ),
               borderData: FlBorderData(show: false),
-              minX: 0,
-              maxX: 24,
+              minX: minX,
+              maxX: maxX,
               minY: 0,
               maxY: 350,
               extraLinesData: ExtraLinesData(
@@ -319,9 +357,9 @@ class _GlucoseTrendsSection extends StatelessWidget {
                       color: Colors.green.withOpacity(0.3),
                       strokeWidth: 1,
                       dashArray: [5, 5]),
-                  if (state.alertSettings != null) ...[
+                  if (widget.state.alertSettings != null) ...[
                     HorizontalLine(
-                      y: state.alertSettings!.criticalLowThreshold * 18.0,
+                      y: widget.state.alertSettings!.criticalLowThreshold * 18.0,
                       color: Colors.red.withOpacity(0.6),
                       strokeWidth: 2,
                       dashArray: [5, 5],
@@ -333,7 +371,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
                       ),
                     ),
                     HorizontalLine(
-                      y: state.alertSettings!.criticalHighThreshold * 18.0,
+                      y: widget.state.alertSettings!.criticalHighThreshold * 18.0,
                       color: Colors.yellow.shade700,
                       strokeWidth: 2,
                       dashArray: [5, 5],
