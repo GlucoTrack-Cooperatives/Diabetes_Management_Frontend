@@ -24,10 +24,6 @@ class _FoodInsulinLogScreenState extends State<FoodInsulinLogScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Logging'),
-        elevation: 0,
-      ),
       body: ResponsiveLayout(
         mobileBody: _MobileLogBody(),
         desktopBody: _DesktopLogBody(),
@@ -68,7 +64,7 @@ class _DesktopLogBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(35.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
