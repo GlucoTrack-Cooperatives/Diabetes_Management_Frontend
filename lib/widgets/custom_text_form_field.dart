@@ -21,7 +21,7 @@ class CustomTextFormField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // A slightly darker grey/white for better visibility against white backgrounds
-    final Color inputFillColor = const Color(0xFFF2F4F7); 
+    final Color inputFillColor = const Color(0xFFEFF1F3);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
