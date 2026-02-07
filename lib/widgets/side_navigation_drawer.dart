@@ -41,13 +41,14 @@ class SideNavigationDrawer extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
+                CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.white,
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundImage: AssetImage('assets/logo.png'),
+                    backgroundColor: Colors.transparent,
                   ),
-                  child: const Icon(Icons.account_circle, size: 48, color: AppColors.primary),
                 ),
                 const SizedBox(height: 16),
                 Text(

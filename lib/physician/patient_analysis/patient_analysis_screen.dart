@@ -164,18 +164,43 @@ class _SummaryTile extends StatelessWidget {
   }
 }
 
-class _GlucoseTrendsSection extends StatelessWidget {
+class _GlucoseTrendsSection extends StatefulWidget {
   final PatientAnalysisState state;
   const _GlucoseTrendsSection({required this.state});
 
   @override
+  State<_GlucoseTrendsSection> createState() => _GlucoseTrendsSectionState();
+}
+
+class _GlucoseTrendsSectionState extends State<_GlucoseTrendsSection> {
+  String _selectedRange = '24H';
+
+  @override
   Widget build(BuildContext context) {
-    final mealLines = state.foodLogs.map((log) {
-      final hour = log.timestamp.toLocal().hour +
-          (log.timestamp.toLocal().minute / 60.0);
+    final now = DateTime.now();
+    final startTime = now.subtract(const Duration(hours: 24));
+
+    double calculateRelativeX(DateTime timestamp) {
+      final difference = timestamp.difference(startTime);
+      return difference.inMinutes / 60.0;
+    }
+
+    double minX = 0;
+    double maxX = 24;
+    double xInterval = 4; // Grid lines every 4 hours
+
+    if (_selectedRange == '4H') {
+      minX = 20; // Show from hour 20 to 24 (the last 4 hours)
+      maxX = 24;
+      xInterval = 1; // Grid lines every 1 hour for better detail
+    }
+
+    final mealLines = widget.state.foodLogs.map((log) {
+      final x = calculateRelativeX(log.timestamp.toLocal());
+      if (x < minX || x > maxX) return null;
 
       return VerticalLine(
-        x: hour,
+        x: x,
         color: Colors.orange.withOpacity(0.4),
         strokeWidth: 2,
         dashArray: [4, 4],
@@ -186,14 +211,14 @@ class _GlucoseTrendsSection extends StatelessWidget {
           labelResolver: (line) => '🍴',
         ),
       );
-    }).toList();
+    }).whereType<VerticalLine>().toList();
 
-    final insulinLines = state.insulinLogs.map((log) {
-      final hour = log.timestamp.toLocal().hour +
-          (log.timestamp.toLocal().minute / 60.0);
+    final insulinLines = widget.state.insulinLogs.map((log) {
+      final x = calculateRelativeX(log.timestamp.toLocal());
+      if (x < minX || x > maxX) return null;
 
       return VerticalLine(
-        x: hour,
+        x: x,
         color: Colors.blue.withOpacity(0.4),
         strokeWidth: 2,
         dashArray: [4, 4],
@@ -204,11 +229,12 @@ class _GlucoseTrendsSection extends StatelessWidget {
           labelResolver: (line) => '💉',
         ),
       );
-    }).toList();
+    }).whereType<VerticalLine>().toList();
 
     final List<List<FlSpot>> segments = [];
-    if (state.glucoseSpots.isNotEmpty) {
-      final sortedSpots = List<FlSpot>.from(state.glucoseSpots)..sort((a, b) => a.x.compareTo(b.x));
+    if (widget.state.glucoseSpots.isNotEmpty) {
+      final sortedSpots = List<FlSpot>.from(widget.state.glucoseSpots)
+        ..sort((a, b) => a.x.compareTo(b.x));
       List<FlSpot> currentSegment = [sortedSpots[0]];
       for (int i = 1; i < sortedSpots.length; i++) {
         // Break line if gap is more than 2 hours (x is in hours here)
@@ -225,19 +251,39 @@ class _GlucoseTrendsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // --- Header Row with Toggle ---
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('24-Hour Glucose Profile', style: AppTextStyles.headline2),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4)),
-              child: Text("Avg: ${state.averageGlucose.toInt()} mg/dL",
-                  style: AppTextStyles.bodyText2.copyWith(
-                      color: AppColors.primary, fontWeight: FontWeight.bold)),
-            )
+            Text('Glucose Profile', style: AppTextStyles.headline2),
+            // Toggle Buttons
+            Row(
+              children: ['4H', '24H'].map((label) {
+                final isSelected = _selectedRange == label;
+                return Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: InkWell(
+                    onTap: () => setState(() => _selectedRange = label),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary : Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? Colors.white : Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -252,7 +298,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
               BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)
             ],
           ),
-          child: state.glucoseSpots.isEmpty
+          child: widget.state.glucoseSpots.isEmpty
               ? Center(
               child: Text("No glucose data for the last 24h",
                   style: AppTextStyles.bodyText2))
@@ -263,13 +309,13 @@ class _GlucoseTrendsSection extends StatelessWidget {
                 show: true,
                 drawVerticalLine: true,
                 horizontalInterval: 50,
-                verticalInterval: 4,
+                verticalInterval: xInterval,
                 getDrawingHorizontalLine: (value) => FlLine(
                     color: Colors.grey.shade100, strokeWidth: 1),
                 getDrawingVerticalLine: (value) =>
                     FlLine(color: Colors.grey.shade100, strokeWidth: 1),
               ),
-              titlesData: const FlTitlesData(
+              titlesData: FlTitlesData(
                 rightTitles:
                 AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 topTitles:
@@ -279,7 +325,10 @@ class _GlucoseTrendsSection extends StatelessWidget {
                     showTitles: true,
                     reservedSize: 32,
                     interval: 4,
-                    getTitlesWidget: _bottomTitles,
+                    getTitlesWidget: (value, meta) {
+                      if (value < minX || value > maxX) return const SizedBox.shrink();
+                      return _bottomTitles(value, meta, startTime);
+                    },
                   ),
                 ),
                 leftTitles: AxisTitles(
@@ -292,8 +341,8 @@ class _GlucoseTrendsSection extends StatelessWidget {
                 ),
               ),
               borderData: FlBorderData(show: false),
-              minX: 0,
-              maxX: 24,
+              minX: minX,
+              maxX: maxX,
               minY: 0,
               maxY: 350,
               extraLinesData: ExtraLinesData(
@@ -308,9 +357,9 @@ class _GlucoseTrendsSection extends StatelessWidget {
                       color: Colors.green.withOpacity(0.3),
                       strokeWidth: 1,
                       dashArray: [5, 5]),
-                  if (state.alertSettings != null) ...[
+                  if (widget.state.alertSettings != null) ...[
                     HorizontalLine(
-                      y: state.alertSettings!.criticalLowThreshold * 18.0,
+                      y: widget.state.alertSettings!.criticalLowThreshold * 18.0,
                       color: Colors.red.withOpacity(0.6),
                       strokeWidth: 2,
                       dashArray: [5, 5],
@@ -322,7 +371,7 @@ class _GlucoseTrendsSection extends StatelessWidget {
                       ),
                     ),
                     HorizontalLine(
-                      y: state.alertSettings!.criticalHighThreshold * 18.0,
+                      y: widget.state.alertSettings!.criticalHighThreshold * 18.0,
                       color: Colors.yellow.shade700,
                       strokeWidth: 2,
                       dashArray: [5, 5],
@@ -371,12 +420,14 @@ class _GlucoseTrendsSection extends StatelessWidget {
     );
   }
 
-  static Widget _bottomTitles(double value, TitleMeta meta) {
+  static Widget _bottomTitles(double value, TitleMeta meta, DateTime startTime) {
+    final timeForLabel = startTime.add(Duration(minutes: (value * 60).toInt()));
     return Padding(
       padding: const EdgeInsets.only(top: 8.0),
-      child: Text('${value.toInt()}:00',
-          style: AppTextStyles.bodyText2.copyWith(
-              color: Colors.grey, fontSize: 10)),
+      child: Text(
+        DateFormat('HH:mm').format(timeForLabel),
+        style: AppTextStyles.bodyText2.copyWith(color: Colors.grey, fontSize: 10),
+      ),
     );
   }
 
@@ -416,26 +467,52 @@ class __DetailedLogsSectionState extends State<_DetailedLogsSection>
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // --- 1. Custom Bubble Tab Bar ---
         Container(
+          height: 50,
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.grey.shade100, // Light grey background for the track
+            borderRadius: BorderRadius.circular(25), // Fully rounded edges
           ),
-          child: TabBar(
-            controller: _tabController,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: Colors.grey,
-            indicator: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(4.0), // Space between track and bubble
+            child: TabBar(
+              controller: _tabController,
+
+              // This creates the "Bubble" effect
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(21), // Matches container radius
+                color: AppColors.primary, // Color of the selected bubble
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              indicatorSize: TabBarIndicatorSize.tab, // Bubble fills the tab width
+              dividerColor: Colors.transparent, // Hides the ugly bottom line
+
+              // Text Colors
+              labelColor: Colors.white, // Selected text color
+              unselectedLabelColor: Colors.grey.shade600, // Unselected text color
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+
+              tabs: const [
+                Tab(text: 'Insulin Logs'),
+                Tab(text: 'Meal Logs'),
+              ],
             ),
-            tabs: const [
-              Tab(text: 'Insulin Logs'),
-              Tab(text: 'Meal Logs'),
-            ],
           ),
         ),
+
         const SizedBox(height: 16),
+
+        // --- 2. Tab Views ---
         SizedBox(
           height: 300,
           child: TabBarView(
@@ -452,16 +529,32 @@ class __DetailedLogsSectionState extends State<_DetailedLogsSection>
 
   Widget _buildInsulinList() {
     if (widget.state.insulinLogs.isEmpty) {
-      return const Center(child: Text("No insulin logs today"));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.vaccines_outlined, size: 48, color: Colors.grey.shade300),
+            const SizedBox(height: 8),
+            Text("No insulin logs today", style: TextStyle(color: Colors.grey.shade500)),
+          ],
+        ),
+      );
     }
     return ListView.builder(
       itemCount: widget.state.insulinLogs.length,
       itemBuilder: (context, index) {
         final log = widget.state.insulinLogs[index];
         return Card(
+          elevation: 0,
+          color: Colors.blue.shade50, // Subtle blue tint for insulin
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: const Icon(Icons.vaccines, color: Colors.blue),
-            title: Text(log.description),
+            leading: const CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.vaccines, color: Colors.blue, size: 20),
+            ),
+            title: Text(log.description, style: const TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text(DateFormat('HH:mm').format(log.timestamp)),
           ),
         );
@@ -471,16 +564,32 @@ class __DetailedLogsSectionState extends State<_DetailedLogsSection>
 
   Widget _buildMealList() {
     if (widget.state.foodLogs.isEmpty) {
-      return const Center(child: Text("No meal logs today"));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.restaurant_outlined, size: 48, color: Colors.grey.shade300),
+            const SizedBox(height: 8),
+            Text("No meal logs today", style: TextStyle(color: Colors.grey.shade500)),
+          ],
+        ),
+      );
     }
     return ListView.builder(
       itemCount: widget.state.foodLogs.length,
       itemBuilder: (context, index) {
         final log = widget.state.foodLogs[index];
         return Card(
+          elevation: 0,
+          color: Colors.orange.shade50, // Subtle orange tint for meals
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: const Icon(Icons.restaurant, color: Colors.orange),
-            title: Text('${log.carbs ?? '0'}g Carbs'),
+            leading: const CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.restaurant, color: Colors.orange, size: 20),
+            ),
+            title: Text('${log.carbs ?? '0'}g Carbs', style: const TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text(DateFormat('HH:mm').format(log.timestamp)),
           ),
         );
