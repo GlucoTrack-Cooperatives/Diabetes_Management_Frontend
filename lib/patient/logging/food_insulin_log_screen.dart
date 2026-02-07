@@ -237,7 +237,7 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
     final state = ref.watch(foodLogControllerProvider);
     final bool isLoading = state is FoodLogLoading || state is FoodAnalysisLoading;
 
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -462,7 +462,7 @@ class _InsulinLogViewState extends ConsumerState<_InsulinLogView> {
     final medicationsAsync = ref.watch(medicationsProvider);
     final state = ref.watch(foodLogControllerProvider);
 
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.all(16),
       child: Card(
         elevation: 0,
