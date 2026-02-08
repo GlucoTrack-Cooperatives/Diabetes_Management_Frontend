@@ -8,6 +8,7 @@ class CustomTextFormField extends StatelessWidget {
   final String? Function(String?)? validator;
   final bool obscureText;
   final TextInputType? keyboardType;
+  final Widget? suffixIcon; // Added optional suffixIcon
 
   const CustomTextFormField({
     super.key,
@@ -16,6 +17,7 @@ class CustomTextFormField extends StatelessWidget {
     this.validator,
     this.obscureText = false,
     this.keyboardType,
+    this.suffixIcon, // Initialize it here
   });
 
   @override
@@ -26,17 +28,19 @@ class CustomTextFormField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Label above the text field
         Padding(
           padding: const EdgeInsets.only(left: 12.0, bottom: 8.0),
           child: Text(
             labelText,
             style: AppTextStyles.bodyText1.copyWith(
-              fontSize: 13, 
+              fontSize: 13,
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w700,
             ),
           ),
         ),
+        // The Text Field Container
         Container(
           decoration: BoxDecoration(
             color: inputFillColor,
@@ -57,6 +61,7 @@ class CustomTextFormField extends StatelessWidget {
             decoration: InputDecoration(
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              suffixIcon: suffixIcon, // Pass the icon here
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,

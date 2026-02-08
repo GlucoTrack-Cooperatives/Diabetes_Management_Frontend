@@ -1,3 +1,4 @@
+import 'package:diabetes_management_system/auth/registration/onboarding_knowledge_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,6 +14,7 @@ import 'package:diabetes_management_system/theme/app_text_styles.dart';
 import '../../physician/physician_main_screen.dart';
 import '../../services/secure_storage_service.dart';
 import 'login_controller.dart';
+import 'package:diabetes_management_system/main_navigation.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -108,6 +110,18 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
       next.when(
         data: (_) async {
           if (previous?.isLoading == true) {
+            // --- ADD THIS BLOCK ---
+            // 1. Check if the "Just Registered" flag is set.
+            // If it is TRUE, we stop here. We let the MainNavigation handle the routing.
+            final isJustRegistered = ref.read(justRegisteredProvider);
+            if (isJustRegistered) {
+              print("DEBUG: Just registered. LoginScreen is stepping aside.");
+              return;
+            }
+            // ---------------------
+
+            // 2. Existing check: If LoginScreen isn't the active screen, don't navigate
+            if (ModalRoute.of(context)?.isCurrent != true) return;
             // Login Successful. Now check the role to decide where to go.
             final role = await ref.read(storageServiceProvider).getRole();
 
