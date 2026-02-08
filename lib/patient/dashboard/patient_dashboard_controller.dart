@@ -82,30 +82,8 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
       final latestGlucose = results[0] as GlucoseReading?;
       final history = results[1] as List<GlucoseReading>;
 
-      print('🔍 LATEST: ${latestGlucose?.timestamp} = ${latestGlucose?.value} mg/dL');
-      print('🔍 HISTORY: ${history.length} readings');
-      if (history.isNotEmpty) {
-        print('🔍 HISTORY RANGE: ${history.first.timestamp} to ${history.last.timestamp}');
-        print('🔍 HISTORY LAST: ${history.last.timestamp} = ${history.last.value} mg/dL');
-      }
-
-      // Check if latest is in history
-      final isInHistory = latestGlucose != null && history.any((r) =>
-      r.timestamp.difference(latestGlucose.timestamp).abs().inSeconds < 5
-      );
-      print('🔍 IS LATEST IN HISTORY? $isInHistory');
-
-      // BEFORE merge
-      print('🔍 BEFORE MERGE: history.length = ${history.length}');
-
       // Merge
       final mergedHistory = _mergeLatestIntoHistory(latestGlucose, history);
-
-      // AFTER merge
-      print('🔍 AFTER MERGE: mergedHistory.length = ${mergedHistory.length}');
-      if (mergedHistory.isNotEmpty) {
-        print('🔍 MERGED LAST: ${mergedHistory.last.timestamp} = ${mergedHistory.last.value} mg/dL');
-      }
 
       final dashboardState = DashboardState(
         latestGlucose: results[0] as GlucoseReading?,
