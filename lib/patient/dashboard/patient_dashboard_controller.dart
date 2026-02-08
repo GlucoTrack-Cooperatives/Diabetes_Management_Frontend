@@ -44,25 +44,6 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
     _startPolling();
   }
 
-  Future<void> _syncGlucoseToHealth(List<GlucoseReading> readings) async {
-    try {
-      for (final reading in readings) {
-        if (!mounted) return;
-        final success = await _healthService.writeBloodGlucose(
-          reading.value,
-          reading.timestamp,
-        );
-        if (!success) {
-          print('⚠️ Failed to write glucose reading: ${reading.value} at ${reading.timestamp}');
-        }
-      }
-      print('✅ Synced ${readings.length} glucose readings to Health');
-    } 
-    catch (e) {
-      print('❌ Error syncing glucose to Health: $e');
-    }
-  }
-
   void _startPolling() {
     _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
@@ -107,10 +88,6 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
       );
 
       state = AsyncValue.data(dashboardState);
-
-      if (dashboardState.history.isNotEmpty) {
-        await _syncGlucoseToHealth(dashboardState.history);
-      }
     } catch (e, stack) {
       print("Error refreshing dashboard: $e");
       if (mounted && !state.hasValue) {

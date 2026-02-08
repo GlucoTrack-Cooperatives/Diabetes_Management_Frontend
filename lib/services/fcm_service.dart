@@ -189,11 +189,13 @@ class FcmService {
   /// Handle foreground messages (when app is open)
   void _handleForegroundMessage(RemoteMessage message) {
     // Extract type from data if available, default to 'alert'
-    final String type = message.data['type'] ?? 'alert';
+    // Ensure that message.data['type'] is safely converted to a String.
+    final String type = (message.data['type'] as String?) ?? 'alert';
 
     String title = message.notification?.title ?? 'New Notification';
     String body = message.notification?.body ?? '';
 
+    print('📬 FCM Notification Received: $title\n $body \n $type \n ${message.data} \n ${message.messageId} \n ${message.sentTime} ');
     _showLocalNotification(
       title: title,
       body: body,
@@ -235,29 +237,15 @@ class FcmService {
       details,
       payload: payload,
     );
-
-    if (kDebugMode) {
-      print('Local notification displayed: $title');
-    }
   }
 
   /// Handle notification tap
   void _onNotificationTap(NotificationResponse response) {
-    if (kDebugMode) {
-      print('Notification tapped: ${response.payload}');
-    }
     // TODO: Navigate to relevant screen (e.g., glucose alerts page)
   }
 
   /// Handle notification tap (when user taps FCM notification from background)
   void _handleNotificationTap(RemoteMessage message) {
-    if (kDebugMode) {
-      print('FCM Notification tapped:');
-      print('Title: ${message.notification?.title}');
-      print('Body: ${message.notification?.body}');
-      print('Data: ${message.data}');
-    }
-
     // TODO: Navigate to relevant screen based on message data
     // For example, navigate to glucose alerts screen
   }
