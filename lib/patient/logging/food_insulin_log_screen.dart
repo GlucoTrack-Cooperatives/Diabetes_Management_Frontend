@@ -13,6 +13,7 @@ import 'package:diabetes_management_system/repositories/log_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diabetes_management_system/patient/logging/food_log_controller.dart';
 import 'package:diabetes_management_system/services/open_food_facts_service.dart';
+import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
 
 // --- MAIN SCREEN ---
 class FoodInsulinLogScreen extends StatefulWidget {
@@ -175,34 +176,88 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
     }
   }
 
+  // --- NEW HELPER: EXTRACT BARCODE FROM IMAGE ---
+  Future<String?> _scanBarcodeFromImage(XFile imageFile) async {
+    final InputImage inputImage = InputImage.fromFilePath(imageFile.path);
+    final BarcodeScanner barcodeScanner = BarcodeScanner();
+
+    try {
+      final List<Barcode> barcodes = await barcodeScanner.processImage(inputImage);
+      if (barcodes.isEmpty) return null;
+
+      // Return the first valid barcode found
+      return barcodes.first.rawValue;
+    } catch (e) {
+      print("Error scanning barcode: $e");
+      return null;
+    } finally {
+      barcodeScanner.close();
+    }
+  }
+
   Future<void> _analyzeData() async {
+    // 1. Validation
     if (!_isBarcodeMode && _imageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please provide a photo.")));
       return;
     }
     if (_isBarcodeMode && _barcodeInputController.text.isEmpty && _imageFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please enter a barcode or scan it.")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please enter a barcode or upload a barcode image.")));
       return;
     }
 
+    // 2. LOGIC SPLIT
     if (_isBarcodeMode) {
-      try {
-        String codeToSearch = _barcodeInputController.text;
-        final result = await _openFoodService.getProductFromBarcode(codeToSearch);
-        if (result != null) {
-          setState(() {
-            _descController.text = result['description'] ?? '';
-            _carbsController.text = result['carbs']?.toString() ?? '';
-            _caloriesController.text = result['calories']?.toString() ?? '';
-          });
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Product not found.")));
+      // --- BARCODE MODE ---
+      String? codeToSearch;
+
+      if (_barcodeInputController.text.isNotEmpty) {
+        // A. Manual Text Entry
+        codeToSearch = _barcodeInputController.text.trim();
+      } else if (_imageFile != null) {
+        // B. Image Upload -> Scan for Barcode
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Scanning image for barcode..."), duration: Duration(seconds: 1)));
+
+        codeToSearch = await _scanBarcodeFromImage(_imageFile!);
+
+        if (codeToSearch == null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No barcode found in this image. Try manual entry."), backgroundColor: Colors.orange));
+          return;
         }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+
+        // Auto-fill the text field so the user sees what was scanned
+        setState(() {
+          _barcodeInputController.text = codeToSearch!;
+        });
       }
+
+      // Execute OpenFoodFacts Search
+      if (codeToSearch != null) {
+        try {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Searching OpenFoodFacts..."), duration: Duration(seconds: 1)));
+          final result = await _openFoodService.getProductFromBarcode(codeToSearch);
+
+          if (result != null) {
+            setState(() {
+              _descController.text = result['description'] ?? '';
+              _carbsController.text = result['carbs']?.toString() ?? '';
+              _caloriesController.text = result['calories']?.toString() ?? '';
+            });
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Product found!"), backgroundColor: Colors.green));
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Product not found in database.")));
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Connection Error: $e")));
+        }
+      }
+
     } else {
-      ref.read(foodLogControllerProvider.notifier).analyzeImage(_imageFile!);
+      // --- AI CAMERA MODE ---
+      // Send to Gemini
+      if (_imageFile != null) {
+        ref.read(foodLogControllerProvider.notifier).analyzeImage(_imageFile!);
+      }
     }
   }
 
@@ -217,6 +272,7 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
   @override
   Widget build(BuildContext context) {
     ref.listen<FoodLogState>(foodLogControllerProvider, (previous, next) {
+      // ... (Keep existing listener logic) ...
       if (next is FoodAnalysisSuccess) {
         _descController.text = next.description;
         _carbsController.text = next.carbs;
@@ -242,29 +298,46 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Mode Selection
           _buildModeSelector(),
           SizedBox(height: 16),
 
-          // Media Section
           _buildMediaCard(isLoading),
           SizedBox(height: 20),
 
-          // Barcode Manual Entry
+          // Manual Barcode Input with Search Button
           if (_isBarcodeMode) ...[
-            // Wrapped in Padding to match the Card's internal padding (20.0)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: CustomTextFormField(
-                labelText: 'Manual Barcode',
-                controller: _barcodeInputController,
-                keyboardType: TextInputType.number,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: CustomTextFormField(
+                      labelText: 'Manual Barcode',
+                      controller: _barcodeInputController,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: Icon(Icons.search, color: Colors.white),
+                      onPressed: isLoading ? null : _analyzeData,
+                      tooltip: "Search Barcode",
+                    ),
+                  ),
+                ],
               ),
             ),
             SizedBox(height: 16),
           ],
 
-          // Analysis Results Card
+          // Results Card
           Card(
             margin: EdgeInsets.zero,
             elevation: 0,
@@ -303,6 +376,7 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
     );
   }
 
+  // ... (Keep _buildModeSelector, _modeButton, etc.) ...
   Widget _buildModeSelector() {
     return Container(
       padding: EdgeInsets.all(4),
@@ -322,6 +396,7 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
         onTap: () => setState(() {
           _isBarcodeMode = (title == "Barcode");
           _imageFile = null;
+          _barcodeInputController.clear(); // Clear text when switching modes
         }),
         child: Container(
           padding: EdgeInsets.symmetric(vertical: 10),
@@ -347,6 +422,7 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
     return Column(
       children: [
         if (_imageFile == null)
+        // ... (Empty State - Keep existing) ...
           Container(
             height: 160,
             decoration: BoxDecoration(
@@ -390,12 +466,14 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
                 ),
             ],
           ),
+        // --- BUTTON TEXT LOGIC ---
         if (_imageFile != null && !isLoading)
           Padding(
             padding: const EdgeInsets.only(top: 12.0),
             child: CustomElevatedButton(
               onPressed: _analyzeData,
-              text: _isBarcodeMode ? "Scan Barcode" : "Identify Food",
+              // Change button text based on mode
+              text: _isBarcodeMode ? "Scan Barcode from Image" : "Identify Food (AI)",
               color: AppColors.primary,
             ),
           ),
@@ -410,15 +488,15 @@ class _MealLogViewState extends ConsumerState<_MealLogView> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircleAvatar(
-            radius: 28, 
-            backgroundColor: AppColors.primary.withOpacity(0.1), 
-            child: Icon(icon, size: 28, color: AppColors.primary)
+              radius: 28,
+              backgroundColor: AppColors.primary.withOpacity(0.1),
+              child: Icon(icon, size: 28, color: AppColors.primary)
           ),
           SizedBox(height: 10),
           Text(label, style: AppTextStyles.bodyText1.copyWith(
-            fontWeight: FontWeight.w600, 
-            color: AppColors.textPrimary,
-            fontSize: 14
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+              fontSize: 14
           )),
         ],
       ),
