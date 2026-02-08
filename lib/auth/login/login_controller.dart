@@ -1,3 +1,4 @@
+import 'package:diabetes_management_system/main_navigation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diabetes_management_system/repositories/auth_repository.dart';
 import 'package:diabetes_management_system/models/login_request.dart';
@@ -36,10 +37,17 @@ class LoginController extends StateNotifier<AsyncValue<void>> {
       // 2. Register FCM
       await _fcmService.registerToken();
 
+      _ref.invalidate(authCheckProvider);
+
       // 3. IMPORTANT: Invalidate providers AFTER saving credentials 
       // to ensure they fetch data for the NEW user.
-      _ref.invalidate(dashboardControllerProvider);
-      _ref.invalidate(physicianPatientsListProvider);
+      if (result.role == 'PATIENT') {
+        // Only load patient data
+        _ref.invalidate(dashboardControllerProvider);
+      } else if (result.role == 'PHYSICIAN') {
+        // Only load physician data
+        _ref.invalidate(physicianPatientsListProvider);
+      }
     });
   }
 

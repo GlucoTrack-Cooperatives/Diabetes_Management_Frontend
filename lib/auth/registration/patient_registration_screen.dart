@@ -1,3 +1,5 @@
+import 'package:diabetes_management_system/auth/registration/onboarding_knowledge_screen.dart';
+import 'package:diabetes_management_system/main_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,6 +14,8 @@ import 'package:diabetes_management_system/utils/responsive_layout.dart';
 import 'package:diabetes_management_system/widgets/custom_elevated_button.dart';
 import 'package:diabetes_management_system/widgets/custom_text_form_field.dart';
 import 'registration_controller.dart';
+import 'package:diabetes_management_system/auth/registration/onboarding_knowledge_screen.dart';
+import 'package:diabetes_management_system/main_navigation.dart';
 
 class PatientRegistrationScreen extends StatelessWidget {
   const PatientRegistrationScreen({super.key});
@@ -175,9 +179,11 @@ class _PatientRegistrationFormState extends ConsumerState<_PatientRegistrationFo
       next.when(
         data: (_) {
           if (previous?.isLoading == true) {
+            print("DEBUG: Registration Success. Setting JustRegistered = TRUE");
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Registration Successful! Logging in...'), backgroundColor: Colors.green),
             );
+            ref.read(justRegisteredProvider.notifier).state = true;
             // Auto-login logic
             ref.read(loginControllerProvider.notifier).login(
               _emailController.text.trim(),
@@ -198,9 +204,13 @@ class _PatientRegistrationFormState extends ConsumerState<_PatientRegistrationFo
     ref.listen<AsyncValue<void>>(loginControllerProvider, (previous, next) {
       next.when(
         data: (_) {
+          print("DEBUG: Login successful, attempting to go to Onboarding");
           if (previous?.isLoading == true) {
+
+            print("DEBUG: Login successful. MainNavigation should now show Onboarding.");
+
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const PatientMainScreen()),
+              MaterialPageRoute(builder: (context) => const OnboardingKnowledgeScreen()),
                   (route) => false,
             );
           }
