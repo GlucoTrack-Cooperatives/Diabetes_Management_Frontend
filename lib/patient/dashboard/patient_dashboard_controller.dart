@@ -65,6 +65,8 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
     }
 
     try {
+      print('🔍 CONTROLLER: Starting refresh at ${DateTime.now()}');
+
       final results = await Future.wait([
         _repository.getLatestGlucose(),
         _repository.getGlucoseHistory(24),
@@ -77,9 +79,37 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
 
       if (!mounted) return;
 
+      final latestGlucose = results[0] as GlucoseReading?;
+      final history = results[1] as List<GlucoseReading>;
+
+      print('🔍 LATEST: ${latestGlucose?.timestamp} = ${latestGlucose?.value} mg/dL');
+      print('🔍 HISTORY: ${history.length} readings');
+      if (history.isNotEmpty) {
+        print('🔍 HISTORY RANGE: ${history.first.timestamp} to ${history.last.timestamp}');
+        print('🔍 HISTORY LAST: ${history.last.timestamp} = ${history.last.value} mg/dL');
+      }
+
+      // Check if latest is in history
+      final isInHistory = latestGlucose != null && history.any((r) =>
+      r.timestamp.difference(latestGlucose.timestamp).abs().inSeconds < 5
+      );
+      print('🔍 IS LATEST IN HISTORY? $isInHistory');
+
+      // BEFORE merge
+      print('🔍 BEFORE MERGE: history.length = ${history.length}');
+
+      // Merge
+      final mergedHistory = _mergeLatestIntoHistory(latestGlucose, history);
+
+      // AFTER merge
+      print('🔍 AFTER MERGE: mergedHistory.length = ${mergedHistory.length}');
+      if (mergedHistory.isNotEmpty) {
+        print('🔍 MERGED LAST: ${mergedHistory.last.timestamp} = ${mergedHistory.last.value} mg/dL');
+      }
+
       final dashboardState = DashboardState(
         latestGlucose: results[0] as GlucoseReading?,
-        history: results[1] as List<GlucoseReading>,
+        history: mergedHistory,
         stats: results[2] as DashboardStats?,
         recentMeals: results[3] as List<RecentMeal>,
         patient: results[4] as Patient?,
@@ -88,6 +118,7 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
       );
 
       state = AsyncValue.data(dashboardState);
+      print('🔍 CONTROLLER: State updated successfully');
     } catch (e, stack) {
       print("Error refreshing dashboard: $e");
       if (mounted && !state.hasValue) {
@@ -95,4 +126,37 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
       }
     }
   }
+}
+
+
+List<GlucoseReading> _mergeLatestIntoHistory(GlucoseReading? latest, List<GlucoseReading> history) {
+  print('🔍 MERGE CALLED: latest = ${latest?.timestamp}, history.length = ${history.length}');
+
+  if (latest == null) {
+    print('🔍 MERGE: Latest is null, returning original');
+    return history;
+  }
+
+  // Check if latest already exists (within 5 seconds tolerance)
+  final exists = history.any((r) {
+    final diff = r.timestamp.difference(latest.timestamp).abs().inSeconds;
+    if (diff < 5) {
+      print('🔍 MERGE: Found matching reading (diff: ${diff}s)');
+      return true;
+    }
+    return false;
+  });
+
+  if (exists) {
+    print('🔍 MERGE: Latest already in history, returning original');
+    return history;
+  }
+
+  // Add latest to history
+  print('🔍 MERGE: Adding latest ${latest.value} mg/dL at ${latest.timestamp}');
+  final merged = [...history, latest];
+  merged.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+  print('🔍 MERGE: SUCCESS - ${history.length} → ${merged.length} readings');
+  return merged;
 }
