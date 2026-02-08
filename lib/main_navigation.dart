@@ -4,9 +4,10 @@ import 'package:diabetes_management_system/patient/patient_main_screen.dart';
 import 'package:diabetes_management_system/physician/physician_main_screen.dart';
 import 'package:diabetes_management_system/services/secure_storage_service.dart';
 import 'package:diabetes_management_system/services/fcm_service.dart';
+import 'package:diabetes_management_system/services/health_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:diabetes_management_system/auth/registration/onboarding_knowledge_screen.dart';
+import 'dart:io' show Platform;
 
 class MainNavigation extends ConsumerStatefulWidget {
   const MainNavigation({super.key});
@@ -21,11 +22,27 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     super.initState();
 
     _initializeFcm();
+    _initializeHealthPermissions();
   }
 
   Future<void> _initializeFcm() async {
     final fcmService = ref.read(fcmServiceProvider);
     await fcmService.initialize();
+  }
+
+  Future<void> _initializeHealthPermissions() async {
+    try {
+      final healthService = ref.read(healthApiServiceProvider);
+      final hasPermissions = await healthService.hasPermissions();
+      debugPrint('Initial health permissions status: $hasPermissions');
+      if (!hasPermissions) {
+        debugPrint('Requesting health permissions...');
+        final granted = await healthService.requestPermissions();
+        debugPrint('Health permissions granted: $granted');
+      }
+    } catch (e) {
+      debugPrint('Health permissions error: $e');
+    }
   }
 
   @override

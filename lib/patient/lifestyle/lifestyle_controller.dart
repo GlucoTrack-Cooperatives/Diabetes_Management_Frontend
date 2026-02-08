@@ -1,5 +1,6 @@
 import 'package:diabetes_management_system/repositories/lifestyle_repository.dart';
 import 'package:diabetes_management_system/services/secure_storage_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diabetes_management_system/services/health_api_service.dart';
 import 'package:diabetes_management_system/models/health_event_request.dart';
@@ -133,6 +134,10 @@ class LifestyleController extends StateNotifier<LifestyleData> {
           state = state.copyWith(isLoading: false);
           return;
         }
+      }
+
+      if (kDebugMode) {
+        await _healthService.debugWriteAndReadBloodGlucoseOnce();
       }
 
       final now = DateTime.now();
