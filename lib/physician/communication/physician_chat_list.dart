@@ -70,6 +70,7 @@ class _PhysicianChatListState extends ConsumerState<PhysicianChatList> {
                           builder: (context) => PhysicianChatScreen(
                             threadId: thread.id,
                             patientName: thread.participantName,
+                            patientId: thread.patientId,
                           ),
                         ),
                       );

@@ -76,18 +76,19 @@ class _DashboardMobileBody extends ConsumerWidget {  // Change to ConsumerWidget
             _buildIOBCard(data.insulinLogs),
             const SizedBox(height: 24),
             _buildGlucoseCard(data.latestGlucose, unit),  // Pass unit
-            if (data.stats != null) ...[
-              const SizedBox(height: 24),
-              _buildStatsCard(data.stats!, unit),  // Pass unit
-            ],
-            const SizedBox(height: 24),
-            _buildNutritionSection(data.recentMeals),
             const SizedBox(height: 24),
             _GlucoseMonitoringSection(
               readings: data.history,
               thresholds: data.thresholds,
               unit: unit,
             ),
+            if (data.stats != null) ...[
+              const SizedBox(height: 24),
+
+              _buildStatsCard(data.stats!, unit),  // Pass unit
+            ],
+            const SizedBox(height: 24),
+            _buildNutritionSection(data.recentMeals),
           ],
         ),
       ),
@@ -616,7 +617,7 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
                     getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
                       radius: 3,
                       color: AppColors.primary,
-                      strokeWidth: 1.5,
+                      strokeWidth: 0.5,
                       strokeColor: Colors.white,
                     ),
                   ),

@@ -138,23 +138,26 @@ class LifestyleController extends StateNotifier<LifestyleData> {
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
       final sleepStart = startOfDay.subtract(const Duration(hours: 3));
-      final caloriesStart = now.subtract(const Duration(days: 2));
+      final caloriesStart = now.subtract(const Duration(hours: 24));
 
+      // get Steps
       final steps = await _healthService.getTotalStepsForDay(now);
+
+      // get calories point
       final caloriePoints = await _healthService.getTotalEnergyData(caloriesStart, now);
 
       final waterLiters = await _healthService.getTotalWaterLiters(startOfDay, now);
       // Convert Liters back to glasses for the UI (0.25L = 1 glass)
       final glasses = (waterLiters / 0.25).round();
 
-      final todayCalories = caloriePoints.where((point) {
-        final pointDate = point.timestamp.toLocal();
-        return pointDate.year == now.year && pointDate.month == now.month && pointDate.day == now.day;
-      }).toList();
+      // total calories and sleep
+      final totalCalories = caloriePoints.fold(0.0, (sum, point) => sum + point.value);
+      print("🔥 Total calories for today: $totalCalories");
 
-      final totalCalories = todayCalories.fold(0.0, (sum, point) => sum + point.value);
       final totalSleepMinutes = await _healthService.getTotalSleepMinutes(sleepStart, now);
-      final weightPoints = await _healthService.getWeightData(now.subtract(const Duration(days: 30)), now);
+      print("😴 Total sleep: $totalSleepMinutes minutes (${(totalSleepMinutes / 60).toStringAsFixed(1)} hours)");
+
+      final weightPoints = await _healthService.getWeightData(now.subtract(const Duration(days: 60)), now);
 
       double? latestWeight;
       if (weightPoints.isNotEmpty) {
@@ -170,6 +173,12 @@ class LifestyleController extends StateNotifier<LifestyleData> {
         waterGlasses: glasses,
         isLoading: false,
       );
+
+      print("✅ Health data sync complete!");
+      print("   Steps: ${steps ?? 0}");
+      print("   Calories: $totalCalories kcal");
+      print("   Sleep: ${totalSleepMinutes.toInt()} min (${(totalSleepMinutes / 60).toStringAsFixed(1)} hours)");
+      print("   Weight: ${latestWeight ?? 'N/A'} kg");
     } catch (e) {
       state = state.copyWith(isLoading: false);
     }

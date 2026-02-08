@@ -2,35 +2,41 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:health/health.dart';
 import '../models/health_data_point.dart' as model;
 import 'dart:io' show Platform;
+import 'package:collection/collection.dart'; // Required for firstWhereOrNull
 
 /// Provider for HealthApiService
 final healthApiServiceProvider = Provider<HealthApiService>((ref) {
   return HealthApiService();
 });
 
-/// Service for interacting with device health data (HealthKit/Google Fit)
+  /// Service for interacting with device health data (HealthKit/Google Fit)
 class HealthApiService {
   final Health _health = Health();
 
   // Define the health data types we're interested in for diabetes management
-  static const List<HealthDataType> _healthTypes = [
-    HealthDataType.BLOOD_GLUCOSE,
-    HealthDataType.STEPS,
-    HealthDataType.HEART_RATE,
-    HealthDataType.BLOOD_PRESSURE_SYSTOLIC,
-    HealthDataType.BLOOD_PRESSURE_DIASTOLIC,
-    HealthDataType.WEIGHT,
-    HealthDataType.HEIGHT,
-    HealthDataType.ACTIVE_ENERGY_BURNED,
-    HealthDataType.WORKOUT,
-    HealthDataType.SLEEP_SESSION,
-    HealthDataType.SLEEP_ASLEEP,
-    HealthDataType.SLEEP_IN_BED,   // iOS only
-    HealthDataType.WATER,
-    HealthDataType.TOTAL_CALORIES_BURNED,
-    HealthDataType.BASAL_ENERGY_BURNED, // iOS only
-  ];
+  // This list is now dynamically generated based on the platform.
+  List<HealthDataType> get _healthTypes {
+    final types = [
+      HealthDataType.STEPS,
+      HealthDataType.WEIGHT,
+      HealthDataType.ACTIVE_ENERGY_BURNED,
+      HealthDataType.WORKOUT,
+      HealthDataType.SLEEP_SESSION,
+      HealthDataType.SLEEP_ASLEEP,
+      HealthDataType.WATER,
+      HealthDataType.TOTAL_CALORIES_BURNED,
+    ];
 
+    // Add iOS-specific types only on iOS
+    if (Platform.isIOS) {
+      types.addAll([
+        HealthDataType.SLEEP_IN_BED,
+        HealthDataType.BASAL_ENERGY_BURNED,
+      ]);
+    }
+
+    return types;
+  }
   /// Request permissions for all health data types
   /// Returns true if permissions granted, false otherwise
   Future<bool> requestPermissions() async {
@@ -78,62 +84,7 @@ class HealthApiService {
     }
   }
 
-  /// Fetch blood glucose data for a given time range
-  Future<List<model.HealthDataPoint>> getBloodGlucoseData(
-      DateTime startTime,
-      DateTime endTime,
-      ) async {
-    try {
-      final healthData = await _health.getHealthDataFromTypes(
-        types: [HealthDataType.BLOOD_GLUCOSE],
-        startTime: startTime,
-        endTime: endTime,
-      );
 
-      return _convertHealthDataPoints(healthData, 'BLOOD_GLUCOSE');
-    } catch (e) {
-      print('Error fetching blood glucose data: $e');
-      return [];
-    }
-  }
-
-  /// Fetch step count data for a given time range
-  Future<List<model.HealthDataPoint>> getStepsData(
-      DateTime startTime,
-      DateTime endTime,
-      ) async {
-    try {
-      final healthData = await _health.getHealthDataFromTypes(
-        types: [HealthDataType.STEPS],
-        startTime: startTime,
-        endTime: endTime,
-      );
-
-      return _convertHealthDataPoints(healthData, 'STEPS');
-    } catch (e) {
-      print('Error fetching steps data: $e');
-      return [];
-    }
-  }
-
-  /// Fetch heart rate data for a given time range
-  Future<List<model.HealthDataPoint>> getHeartRateData(
-      DateTime startTime,
-      DateTime endTime,
-      ) async {
-    try {
-      final healthData = await _health.getHealthDataFromTypes(
-        types: [HealthDataType.HEART_RATE],
-        startTime: startTime,
-        endTime: endTime,
-      );
-
-      return _convertHealthDataPoints(healthData, 'HEART_RATE');
-    } catch (e) {
-      print('Error fetching heart rate data: $e');
-      return [];
-    }
-  }
 
   /// Fetch weight data for a given time range
   Future<List<model.HealthDataPoint>> getWeightData(
@@ -153,27 +104,6 @@ class HealthApiService {
       return [];
     }
   }
-
-  /// Fetch all available health data for a given time range
-  Future<List<model.HealthDataPoint>> getAllHealthData(
-      DateTime startTime,
-      DateTime endTime,
-      ) async {
-    try {
-      final healthData = await _health.getHealthDataFromTypes(
-        types: _healthTypes,
-        startTime: startTime,
-        endTime: endTime,
-      );
-
-      return _convertHealthDataPoints(healthData, null);
-    } catch (e) {
-      print('Error fetching all health data: $e');
-      return [];
-    }
-  }
-
-  // Add to HealthApiService class
 
   /// Write water intake (1 glass ≈ 250ml or 0.25L)
   Future<bool> writeWater(double liters, DateTime timestamp) async {
@@ -212,59 +142,13 @@ class HealthApiService {
     }
   }
 
-  /// Write blood glucose data to health store
-  Future<bool> writeBloodGlucose(double value, DateTime timestamp) async {
-    try {
-      return await _health.writeHealthData(
-        value: value,
-        type: HealthDataType.BLOOD_GLUCOSE,
-        startTime: timestamp,
-        endTime: timestamp,
-        unit: HealthDataUnit.MILLIGRAM_PER_DECILITER,
-      );
-    } catch (e) {
-      print('Error writing blood glucose data: $e');
-      return false;
-    }
-  }
 
-  /// Write weight data to health store
-  Future<bool> writeWeight(double value, DateTime timestamp) async {
-    try {
-      return await _health.writeHealthData(
-        value: value,
-        type: HealthDataType.WEIGHT,
-        startTime: timestamp,
-        endTime: timestamp,
-        unit: HealthDataUnit.KILOGRAM,
-      );
-    } catch (e) {
-      print('Error writing weight data: $e');
-      return false;
-    }
-  }
-
-  /// Write steps data to health store
-  Future<bool> writeSteps(int steps, DateTime startTime, DateTime endTime) async {
-    try {
-      return await _health.writeHealthData(
-        value: steps.toDouble(),
-        type: HealthDataType.STEPS,
-        startTime: startTime,
-        endTime: endTime,
-        unit: HealthDataUnit.COUNT,
-      );
-    } catch (e) {
-      print('Error writing steps data: $e');
-      return false;
-    }
-  }
 
   /// Get aggregate step count for a given day
   Future<int?> getTotalStepsForDay(DateTime day) async {
     try {
       final startOfDay = DateTime(day.year, day.month, day.day);
-      final endOfDay = startOfDay.add(const Duration(days: 1));
+      final endOfDay = startOfDay.add(const Duration(hours: 24));
 
       final steps = await _health.getTotalStepsInInterval(startOfDay, endOfDay);
       return steps;
@@ -341,7 +225,6 @@ class HealthApiService {
   /// Fetch sleep data and return total duration in minutes
   /// Uses SLEEP_SESSION for Health Connect compatibility
   /// Deduplicates entries with same time range from different sources
-  /// Prefer the original APP !! (e.g Sleep as Android) over google fit
   /// Fetch sleep data and return total duration in minutes
   /// Uses platform-specific sleep types (iOS: SLEEP_IN_BED, Android: SLEEP_SESSION)
   Future<double> getTotalSleepMinutes(DateTime startTime, DateTime endTime) async {

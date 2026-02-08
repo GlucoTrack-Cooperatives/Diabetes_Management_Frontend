@@ -18,10 +18,12 @@ class ChatView extends ConsumerStatefulWidget {
 
 class _ChatViewState extends ConsumerState<ChatView> {
   final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void dispose() {
     _messageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -35,11 +37,8 @@ class _ChatViewState extends ConsumerState<ChatView> {
     _messageController.clear();
   }
 
-  // Helper to format the date header string
   String _getDateHeader(DateTime date) {
-    // Convert the message date to local time first
     final localDate = date.toLocal();
-
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
@@ -47,11 +46,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
 
     if (msgDate == today) return "Today";
     if (msgDate == yesterday) return "Yesterday";
-
     if (today.difference(msgDate).inDays < 7) {
       return DateFormat('EEEE').format(localDate);
     }
-
     return DateFormat('d MMM').format(localDate);
   }
 
@@ -60,69 +57,73 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final messagesAsync = ref.watch(chatMessagesProvider(widget.threadId));
     final currentUserIdAsync = ref.watch(currentUserIdProvider);
 
-    return Column(
-      children: [
-        Expanded(
-          child: messagesAsync.when(
-            skipLoadingOnReload: true,
-            data: (messages) {
-              final currentUserId = currentUserIdAsync.value;
-              return ListView.builder(
-                reverse: true,
-                padding: const EdgeInsets.all(16),
-                itemCount: messages.length,
-                itemBuilder: (context, index) {
-                  final msg = messages[index];
-                  bool isMe = msg.senderId == currentUserId;
+    // 1. Soft background color for the whole chat area
+    return Container(
+      color: const Color(0xFFF5F7FA),
+      child: Column(
+        children: [
+          Expanded(
+            child: messagesAsync.when(
+              skipLoadingOnReload: true,
+              data: (messages) {
+                final currentUserId = currentUserIdAsync.value;
+                return ListView.builder(
+                  controller: _scrollController,
+                  reverse: true,
+                  physics: const BouncingScrollPhysics(), // 2. Bouncing physics feels more native
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = messages[index];
+                    // Defensive check for null currentUserId
+                    bool isMe = currentUserId != null && msg.senderId == currentUserId;
 
-                  // Date logic for headers
-                  bool showDateHeader = false;
-                  if (index == messages.length - 1) {
-                    // Always show header for the very first message in history
-                    showDateHeader = true;
-                  } else {
-                    // Compare current message date with the next one in the list (previous chronologically)
-                    final prevMsg = messages[index + 1];
-                    if (msg.timestamp.day != prevMsg.timestamp.day ||
-                        msg.timestamp.month != prevMsg.timestamp.month ||
-                        msg.timestamp.year != prevMsg.timestamp.year) {
+                    bool showDateHeader = false;
+                    if (index == messages.length - 1) {
                       showDateHeader = true;
+                    } else {
+                      final prevMsg = messages[index + 1];
+                      if (msg.timestamp.day != prevMsg.timestamp.day ||
+                          msg.timestamp.month != prevMsg.timestamp.month ||
+                          msg.timestamp.year != prevMsg.timestamp.year) {
+                        showDateHeader = true;
+                      }
                     }
-                  }
 
-                  return Column(
-                    children: [
-                      if (showDateHeader) _buildDateHeader(msg.timestamp),
-                      _buildMessageBubble(msg, isMe),
-                    ],
-                  );
-                },
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) => Center(child: Text('Error: $err')),
+                    return Column(
+                      children: [
+                        if (showDateHeader) _buildDateHeader(msg.timestamp),
+                        _buildMessageBubble(msg, isMe),
+                      ],
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Error: $err')),
+            ),
           ),
-        ),
-        _buildInputArea(),
-      ],
+          _buildInputArea(),
+        ],
+      ),
     );
   }
 
   Widget _buildDateHeader(DateTime date) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.symmetric(vertical: 24),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.black.withOpacity(0.05), // Very subtle grey
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Text(
             _getDateHeader(date),
             style: AppTextStyles.bodyText2.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
               color: Colors.grey.shade600,
             ),
           ),
@@ -132,58 +133,105 @@ class _ChatViewState extends ConsumerState<ChatView> {
   }
 
   Widget _buildMessageBubble(ChatMessage msg, bool isMe) {
+    // 3. Modern Bubble Design
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Column(
-        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: isMe ? AppColors.primary : Colors.grey[300],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75, // Max 75% width
+        ),
+        decoration: BoxDecoration(
+          color: isMe ? AppColors.primary : Colors.white,
+          // Subtle shadow for depth on received messages
+          boxShadow: isMe
+              ? []
+              : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: isMe ? const Radius.circular(16) : const Radius.circular(4),
+            bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(16),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min, // Hug content
+          children: [
+            Text(
               msg.content,
-              style: TextStyle(color: isMe ? Colors.white : Colors.black),
+              style: AppTextStyles.bodyText1.copyWith(
+                color: isMe ? Colors.white : Colors.black87,
+                height: 1.3,
+              ),
             ),
-          ),
-          Text(
-            // ADD .toLocal() HERE
-            DateFormat('HH:mm').format(msg.timestamp.toLocal()),
-            style: AppTextStyles.bodyText2.copyWith(fontSize: 10),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+                DateFormat('HH:mm').format(msg.timestamp.toLocal()),
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isMe ? Colors.white.withOpacity(0.7) : Colors.grey.shade500,
+                ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildInputArea() {
+    // 4. "Pill" style input area with elevation
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: const InputDecoration(
-                hintText: "Type a message...",
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 12),
-              ),
-              onSubmitted: (_) => _sendMessage(),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.send, color: AppColors.primary),
-            onPressed: _sendMessage,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
           ),
         ],
+      ),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 0),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.transparent),
+                ),
+                child: TextField(
+                  controller: _messageController,
+                  textCapitalization: TextCapitalization.sentences,
+                  minLines: 1,
+                  maxLines: 4, // Grow up to 4 lines
+                  decoration: const InputDecoration(
+                    hintText: "Type a message...",
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onSubmitted: (_) => _sendMessage(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Circular Send Button
+            GestureDetector(
+              onTap: _sendMessage,
+              child: CircleAvatar(
+                radius: 24,
+                backgroundColor: AppColors.primary,
+                child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
