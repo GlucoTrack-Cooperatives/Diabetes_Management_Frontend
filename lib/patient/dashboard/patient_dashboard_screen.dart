@@ -364,78 +364,76 @@ class _GlucoseMonitoringSection extends StatefulWidget {
 class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
   String _selectedRange = '24H';
 
-  (double minX, double maxX, double interval) _getAxisDetails() {
+  (double minX, double maxX, double interval) _getAxisDetails(DateTime? latestReading) {
     final now = DateTime.now();
-    DateTime snappedMax;
     Duration rangeDuration;
     double intervalMs;
+
+    // 1. Determine the "Standard" Max (End of current hour)
+    DateTime snappedMax = DateTime(now.year, now.month, now.day, now.hour + 1);
+
+    // 2. Safety check: If for some reason data exists beyond that hour, push it
+    if (latestReading != null && latestReading.isAfter(snappedMax)) {
+      snappedMax = DateTime(latestReading.year, latestReading.month, latestReading.day, latestReading.hour + 1);
+    }
 
     const int hourInMs = 3600000;
     const int minuteInMs = 60000;
 
     switch (_selectedRange) {
       case '4H':
-        final remainder = 30 - (now.minute % 30);
-        snappedMax = now.add(Duration(minutes: remainder)).subtract(Duration(seconds: now.second, milliseconds: now.millisecond));
         rangeDuration = const Duration(hours: 4);
         intervalMs = 30 * minuteInMs.toDouble();
         break;
       case '8H':
-        final remainder = 60 - now.minute;
-        snappedMax = now.add(Duration(minutes: remainder)).subtract(Duration(seconds: now.second, milliseconds: now.millisecond));
         rangeDuration = const Duration(hours: 8);
-        intervalMs = hourInMs.toDouble();
+        intervalMs = 2 * hourInMs.toDouble();
         break;
       case '24H':
       default:
-        final remainder = 60 - now.minute;
-        snappedMax = now.add(Duration(minutes: remainder)).subtract(Duration(seconds: now.second, milliseconds: now.millisecond));
         rangeDuration = const Duration(hours: 24);
-        intervalMs = 4 * hourInMs.toDouble();
+        intervalMs = 5 * hourInMs.toDouble();
         break;
     }
 
-    final maxX = snappedMax.millisecondsSinceEpoch.toDouble();
-    final minX = snappedMax.subtract(rangeDuration).millisecondsSinceEpoch.toDouble();
+    final double maxXValue = snappedMax.millisecondsSinceEpoch.toDouble();
+    final double minXValue = snappedMax.subtract(rangeDuration).millisecondsSinceEpoch.toDouble();
 
-    return (minX, maxX, intervalMs);
+    return (minXValue, maxXValue, intervalMs);
   }
 
   @override
   Widget build(BuildContext context) {
-    final (minX, maxX, interval) = _getAxisDetails();
-
-    // Add buffer for filtering (1 hour = 3600000 ms)
-    final filterMaxX = maxX + (60 * 60 * 1000);
+    final latestReadingTimestamp = widget.readings.isNotEmpty ? widget.readings.last.timestamp : null;
+    final (minX, maxX, interval) = _getAxisDetails(latestReadingTimestamp);
 
     print('📊 Total readings: ${widget.readings.length}');
     print('📊 Selected range: $_selectedRange');
     print('📊 Window: ${DateTime.fromMillisecondsSinceEpoch(minX.toInt())} to ${DateTime.fromMillisecondsSinceEpoch(maxX.toInt())}');
+    print('📊 Filter Max (with buffer): ${DateTime.fromMillisecondsSinceEpoch(maxX.toInt())}');
 
     if (widget.readings.isNotEmpty) {
-      print('📊 READINGS RANGE: ${widget.readings.first.timestamp.toLocal()} to ${widget.readings.last.timestamp.toLocal()}');
-      print('📊 LAST READING: ${widget.readings.last.timestamp.toLocal()} = ${widget.readings.last.value} mg/dL');
+      print('📊 READINGS RANGE: ${widget.readings.first.timestamp} to ${widget.readings.last.timestamp.toLocal()}');
+      print('📊 LAST READING: ${widget.readings.last.timestamp} = ${widget.readings.last.value} mg/dL');
     }
 
     final spots = widget.readings
         .where((r) {
-      final localMs = r.timestamp.toLocal().millisecondsSinceEpoch;
-      return localMs >= minX && localMs <= maxX;
+      final ms = r.timestamp.millisecondsSinceEpoch.toDouble();
+      return ms >= minX && ms <= maxX;
     })
         .map((r) => FlSpot(
-        r.timestamp.toLocal().millisecondsSinceEpoch.toDouble(),
-        widget.unit.convertFromMgdL(r.value)
+      r.timestamp.millisecondsSinceEpoch.toDouble(),
+      widget.unit.convertFromMgdL(r.value),
     ))
         .toList();
 
     spots.sort((a, b) => a.x.compareTo(b.x));
-
     print('📊 SPOTS AFTER FILTER: ${spots.length}');
     if (spots.isNotEmpty) {
       print('📊 SPOTS RANGE: ${DateTime.fromMillisecondsSinceEpoch(spots.first.x.toInt())} to ${DateTime.fromMillisecondsSinceEpoch(spots.last.x.toInt())}');
       print('📊 LAST SPOT: ${DateTime.fromMillisecondsSinceEpoch(spots.last.x.toInt())} = ${spots.last.y}');
     }
-    print('📊 ========================================\n');
 
     final List<List<FlSpot>> segments = [];
     if (spots.isNotEmpty) {
@@ -451,12 +449,6 @@ class _GlucoseMonitoringSectionState extends State<_GlucoseMonitoringSection> {
       }
       segments.add(currentSegment);
     }
-
-    if (spots.isNotEmpty) {
-      print('🔍 First spot: x=${DateTime.fromMillisecondsSinceEpoch(spots.first.x.toInt())}, y=${spots.first.y}');
-      print('🔍 Last spot: x=${DateTime.fromMillisecondsSinceEpoch(spots.last.x.toInt())}, y=${spots.last.y}');
-    }
-
 
     final maxY = widget.unit == GlucoseUnit.mgdL ? 300.0 : 22.0;
 

@@ -46,17 +46,6 @@ class ApiClient {
 
     final headers = await _getHeaders();
 
-    if (kDebugMode) {
-      print('=== API GET REQUEST ===');
-      print('URL: $uri');
-      print('Headers: ${headers.keys.join(", ")}');
-      if (headers['Authorization'] != null) {
-        print('Auth: ${headers['Authorization']!.substring(0, 20)}...');
-      } else {
-        print('Auth: NONE');
-      }
-    }
-
     final response = await http.get(uri, headers: headers);
 
     if (kDebugMode) {
