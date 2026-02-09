@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/patient_profile.dart';
 import '../../repositories/dashboard_repository.dart';
@@ -38,6 +39,7 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
   final DashboardRepository _repository;
   final HealthApiService _healthService;
   Timer? _refreshTimer;
+  final Set<String> _syncedGlucoseKeys = <String>{};
 
   DashboardController(this._repository, this._healthService) : super(const AsyncValue.loading()) {
     refreshData();
@@ -96,11 +98,38 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
       );
 
       state = AsyncValue.data(dashboardState);
+
+      await _syncBloodGlucoseToHealthConnect(dashboardState.history);
       print('🔍 CONTROLLER: State updated successfully');
     } catch (e, stack) {
       print("Error refreshing dashboard: $e");
       if (mounted && !state.hasValue) {
         state = AsyncValue.error(e, stack);
+      }
+    }
+  }
+
+  Future<void> _syncBloodGlucoseToHealthConnect(List<GlucoseReading> history) async {
+    if (!Platform.isAndroid || history.isEmpty) return;
+
+    final canWrite = await _healthService.hasBloodGlucoseWritePermission();
+    if (!canWrite) {
+      print('Blood glucose write permission not granted. Skipping Health Connect sync.');
+      return;
+    }
+
+    if (_syncedGlucoseKeys.length > 5000) {
+      _syncedGlucoseKeys.clear();
+    }
+
+    for (final reading in history) {
+      final timestamp = reading.timestamp.toLocal();
+      final key = '${timestamp.millisecondsSinceEpoch ~/ 60000}-${reading.value.round()}';
+      if (_syncedGlucoseKeys.contains(key)) continue;
+
+      final wrote = await _healthService.writeBloodGlucose(reading.value, timestamp);
+      if (wrote) {
+        _syncedGlucoseKeys.add(key);
       }
     }
   }
