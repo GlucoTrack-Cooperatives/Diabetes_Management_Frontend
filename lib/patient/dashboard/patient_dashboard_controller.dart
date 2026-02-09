@@ -67,6 +67,8 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
     }
 
     try {
+      print('🔍 CONTROLLER: Starting refresh at ${DateTime.now()}');
+
       final results = await Future.wait([
         _repository.getLatestGlucose(),
         _repository.getGlucoseHistory(24),
@@ -79,9 +81,15 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
 
       if (!mounted) return;
 
+      final latestGlucose = results[0] as GlucoseReading?;
+      final history = results[1] as List<GlucoseReading>;
+
+      // Merge
+      final mergedHistory = _mergeLatestIntoHistory(latestGlucose, history);
+
       final dashboardState = DashboardState(
         latestGlucose: results[0] as GlucoseReading?,
-        history: results[1] as List<GlucoseReading>,
+        history: mergedHistory,
         stats: results[2] as DashboardStats?,
         recentMeals: results[3] as List<RecentMeal>,
         patient: results[4] as Patient?,
@@ -92,6 +100,7 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
       state = AsyncValue.data(dashboardState);
 
       await _syncBloodGlucoseToHealthConnect(dashboardState.history);
+      print('🔍 CONTROLLER: State updated successfully');
     } catch (e, stack) {
       print("Error refreshing dashboard: $e");
       if (mounted && !state.hasValue) {
@@ -124,4 +133,37 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardState>> {
       }
     }
   }
+}
+
+
+List<GlucoseReading> _mergeLatestIntoHistory(GlucoseReading? latest, List<GlucoseReading> history) {
+  print('🔍 MERGE CALLED: latest = ${latest?.timestamp}, history.length = ${history.length}');
+
+  if (latest == null) {
+    print('🔍 MERGE: Latest is null, returning original');
+    return history;
+  }
+
+  // Check if latest already exists (within 5 seconds tolerance)
+  final exists = history.any((r) {
+    final diff = r.timestamp.difference(latest.timestamp).abs().inSeconds;
+    if (diff < 5) {
+      print('🔍 MERGE: Found matching reading (diff: ${diff}s)');
+      return true;
+    }
+    return false;
+  });
+
+  if (exists) {
+    print('🔍 MERGE: Latest already in history, returning original');
+    return history;
+  }
+
+  // Add latest to history
+  print('🔍 MERGE: Adding latest ${latest.value} mg/dL at ${latest.timestamp}');
+  final merged = [...history, latest];
+  merged.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+  print('🔍 MERGE: SUCCESS - ${history.length} → ${merged.length} readings');
+  return merged;
 }

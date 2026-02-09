@@ -42,9 +42,6 @@ class DashboardRepository {
       final response = await _client.get('/patients/$patientId/dashboard/glucose/history?hours=$hours');
 
       if (response == null) return [];
-      
-      // DEBUG: Print raw response to compare with model
-      print("RAW Glucose History Response: $response");
 
       return (response as List).map((e) => GlucoseReading.fromJson(e)).toList();
     } catch (e, stack) {

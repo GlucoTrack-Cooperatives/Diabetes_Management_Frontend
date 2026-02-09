@@ -1,6 +1,6 @@
 class GlucoseReading {
-  final double value; // We store as double to handle both mg/dL (int) and mmol/L
-  final String? trend; // "RISING", "FALLING", "STABLE", etc.
+  final double value; 
+  final String? trend; 
   final DateTime timestamp;
 
   GlucoseReading({
@@ -10,15 +10,26 @@ class GlucoseReading {
   });
 
   factory GlucoseReading.fromJson(Map<String, dynamic> json) {
-    // Backend sends 'value' as Integer (likely mg/dL).
-    // If you need mmol/L, divide by 18.0.
-    // Here we assume Backend sends raw mg/dL and we convert for UI.
-    double rawValue = (json['value'] as num).toDouble();
+    String ts = json['timestamp'];
+
+    // 1. parse() shifts "17:17Z" to "18:17 Local".
+    // 2. toUtc() shifts "18:17 Local" back to "17:17 UTC".
+    // This ensures 'raw' always contains the digits exactly as they appear in the JSON.
+    DateTime raw = DateTime.parse(ts).toUtc();
 
     return GlucoseReading(
-      value: rawValue,
+      value: (json['value'] as num).toDouble(),
       trend: json['trend'],
-      timestamp: DateTime.parse(json['timestamp']), // Handles ISO-8601 Instant
+      // 3. Now we create a local time using the original digits (17:17).
+      timestamp: DateTime(
+        raw.year,
+        raw.month,
+        raw.day,
+        raw.hour,
+        raw.minute,
+        raw.second,
+        raw.millisecond,
+      ),
     );
   }
 }
@@ -43,11 +54,10 @@ class DashboardStats {
   }
 }
 
-// Add this class to your existing file
 class RecentMeal {
   final String description;
-  final String carbs;    // Backend sends "45g Carbs"
-  final String calories; // Backend sends "350 Kcal"
+  final String carbs;    
+  final String calories; 
   final String timestamp;
 
   RecentMeal({
@@ -66,4 +76,3 @@ class RecentMeal {
     );
   }
 }
-
